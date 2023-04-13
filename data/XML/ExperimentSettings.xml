@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<root>
+    <runExperiment> 21 </runExperiment>
+
+    <experimentID id = '11'>
+        <numLocalSilo>      2,       2,       2,       2,       2       </numLocalSilo>
+        <implementation>    SNAPPER, SNAPPER, SNAPPER, SNAPPER, SNAPPER </implementation>
+        <isLoggingEnabled>  true,    true,    true,    true,    true    </isLoggingEnabled>
+        <hierarchicalCoord> false,   true,    true,    true,    true    </hierarchicalCoord>
+        <optimizeCommit>    false,   false,   true,    false,   true    </optimizeCommit>
+        <optimizeBatching>  false,   false,   false,   true,    true    </optimizeBatching>>
+    </experimentID>
+
+    <experimentID id = '12'>
+        <numLocalSilo>      16,      16,      16,      16,      16      </numLocalSilo>
+        <implementation>    SNAPPER, SNAPPER, SNAPPER, SNAPPER, SNAPPER </implementation>
+        <isLoggingEnabled>  true,    true,    true,    true,    true    </isLoggingEnabled>
+        <hierarchicalCoord> false,   true,    true,    true,    true    </hierarchicalCoord>
+        <optimizeCommit>    false,   false,   true,    false,   true    </optimizeCommit>
+        <optimizeBatching>  false,   false,   false,   true,    true    </optimizeBatching>>
+    </experimentID>
+
+    <experimentID id = '21'>
+        <numLocalSilo>     2      </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '22'>
+        <numLocalSilo>     16,     16      </numLocalSilo>
+        <implementation>   NONTXN, SNAPPER </implementation>
+        <isLoggingEnabled> false,  true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '31'>
+        <numLocalSilo>     2       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '32'>
+        <numLocalSilo>     2       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '33'>
+        <numLocalSilo>     2       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '34'>
+        <numLocalSilo>     2       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '35'>
+        <numLocalSilo>     2       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '40'>
+        <numLocalSilo>     2,      4,      8,      16     </numLocalSilo>
+        <implementation>   NONTXN, NONTXN, NONTXN, NONTXN </implementation>
+        <isLoggingEnabled> false,  false,  false,  false  </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '41'>
+        <numLocalSilo>     2,          4,          8,          16         </numLocalSilo>
+        <implementation>   ORLEANSTXN, ORLEANSTXN, ORLEANSTXN, ORLEANSTXN </implementation>
+        <isLoggingEnabled> true,       true,       true,       true       </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '42'>
+        <numLocalSilo>     2,       4,       8,       16      </numLocalSilo>
+        <implementation>   SNAPPER, SNAPPER, SNAPPER, SNAPPER </implementation>
+        <isLoggingEnabled> true,    true,    true,    true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '43'>
+        <numLocalSilo>     2,       4,       8,       16      </numLocalSilo>
+        <implementation>   SNAPPER, SNAPPER, SNAPPER, SNAPPER </implementation>
+        <isLoggingEnabled> true,    true,    true,    true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '44'>
+        <numLocalSilo>     2,       4,       8,       16      </numLocalSilo>
+        <implementation>   SNAPPER, SNAPPER, SNAPPER, SNAPPER </implementation>
+        <isLoggingEnabled> true,    true,    true,    true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '51'>
+        <numLocalSilo>     4       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '52'>
+        <numLocalSilo>     4       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '53'>
+        <numLocalSilo>     4       </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+</root>

@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AWSSDK.EC2" Version="3.7.121.5" />
+		<PackageReference Include="AWSSDK.MemoryDB" Version="3.7.102.27" />
+		<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.101.42" />
+		<PackageReference Include="SSH.NET" Version="2020.0.2" />
+		<PackageReference Include="StackExchange.Redis" Version="2.6.90" />
+	</ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Utilities\Utilities.csproj" />
+  </ItemGroup>
+
+</Project>

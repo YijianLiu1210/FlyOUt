@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<root>
+	<txnSize> 4 </txnSize>                  <!-- number of grains a transaction will access -->
+
+	<txnDistLevel>          2  </txnDistLevel>                 <!-- number of servers a transaction will access -->
+    <batchSizeInMSecsBasic> 20 </batchSizeInMSecsBasic>
+
+    <pactPercent> 0 </pactPercent>
+
+    <distPercent> 0, 50, 100 </distPercent>        <!-- percentage of distributed transactions -->
+
+    <grainSkewness> 100, 1   </grainSkewness>    <!-- 10% grains in each silo are in hot set -->
+    <actPipeSize>   128, 128 </actPipeSize>      <!-- pipe size for each worker thread -->
+    <pactPipeSize>  128, 128 </pactPipeSize>
+</root>
+
+<!-- fixed setup for this experiment -->
+<!-- numCPU per silo          = 4 -->
+<!-- number of activated silo = 2, 4, 8, 16 (scalability) -->
+
+<!-- silo setting variable -->
+<!-- isLoggingEnabled = false -->

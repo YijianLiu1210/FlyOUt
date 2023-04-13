@@ -1,0 +1,13 @@
+# ignore all build files
+*/bin/
+*/obj/
+
+# ignore all files in the log folder
+data/log/
+data/result.txt
+data/tp-GrainMigration.txt
+#data/snapper.pem
+# data/AWS_credential.txt
+
+# ignore visual studio cache
+.vs

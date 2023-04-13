@@ -1,0 +1,10 @@
+﻿using Utilities;
+using System.Threading.Tasks;
+
+namespace SmallBank.Interfaces
+{
+    public interface INonTransactionalAccountGrain : Orleans.IGrainWithGuidKey
+    {
+        Task<TransactionResult> StartTransaction(string startFunc, object funcInput);
+    }
+}
