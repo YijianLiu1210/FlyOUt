@@ -6,7 +6,7 @@
 data/log/
 data/result.txt
 data/tp-GrainMigration.txt
-#data/snapper.pem
+#data/snapper-ami.pem
 # data/AWS_credential.txt
 
 # ignore visual studio cache
