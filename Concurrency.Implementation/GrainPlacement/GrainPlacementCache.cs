@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using System.Threading;
 using StackExchange.Redis;
 using Utilities;
-using Orleans;
 using System.Linq;
+using MessagePack;
+using System.Diagnostics;
 
 namespace Concurrency.Implementation.GrainPlacement
 {
@@ -85,15 +86,24 @@ namespace Concurrency.Implementation.GrainPlacement
             }
             else if (Constants.benchmark == BenchmarkType.TPCC)
             {
-                var keys = redisServer.Keys(Constants.Redis_GrainPlacementMap, Constants.GrainIDPrefix + "*");
-                Console.WriteLine($"find {keys.Count()} grain IDs");
-                foreach (var key in keys)
-                {
-                    var grainID = Guid.Parse(key.ToString().Split("+")[1]);
+                var localSiloList = Helper.GetLocalSiloList(siloInfo_db);
 
-                    var silo = grainPlacement_db.HashGet(key, "SiloAddress").ToString();
-                    if (string.IsNullOrEmpty(silo)) throw new SnapperStorageException($"SiloAddress info of grain {grainID} is not in Redis {Constants.Redis_GrainPlacementMap}, key = {key}");
-                    grainIDToSilo[grainID] = silo;
+                foreach (var silo in localSiloList)
+                {
+                    var data = siloInfo_db.HashGet(Constants.GeneralInfoPrefix + silo, "grainsInSilo");
+                    var grainIDsInSilo = MessagePackSerializer.Deserialize<List<Guid>>(data);
+
+                    var count = 0;
+                    foreach (var grainID in grainIDsInSilo)
+                    {
+                        if (grainIDToSilo.ContainsKey(grainID)) Debug.Assert(grainIDToSilo[grainID] == silo);
+                        else
+                        {
+                            count++;
+                            grainIDToSilo[grainID] = silo;
+                        }
+                    }
+                    Console.WriteLine($"Find {grainIDsInSilo.Count()} grain IDs in local silo {silo}, add {count} grain IDs. ");
                 }
             }
 

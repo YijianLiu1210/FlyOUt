@@ -110,6 +110,15 @@ namespace TPCC.Grains
                 var O_ID = input.order.O_ID;
                 var myState = await GetState(context, AccessMode.ReadWrite);
                 Debug.Assert(myState.neworder.Contains(O_ID) == false);
+
+                // only do it for local test
+                if (Constants.isLocalTest)
+                {
+                    myState.neworder.Clear();
+                    myState.orderline_table.Clear();
+                    myState.orderline_table.Clear();
+                }
+
                 myState.neworder.Add(O_ID);
                 myState.order_table.Add(O_ID, input.order);
                 foreach (var orderline in input.orderlines)

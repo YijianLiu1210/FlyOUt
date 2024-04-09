@@ -18,6 +18,7 @@ using TPCC.Grains;
 using Concurrency.Interface.TransactionExecution;
 using SmallBank.Grains;
 using System.Linq;
+using MessagePack;
 
 namespace SnapperExperimentController
 {
@@ -412,7 +413,12 @@ namespace SnapperExperimentController
                 }
 
                 // STEP 2: write the initial grain placement info to redis
+                var grainIDsInSilo = new List<Guid>();
+                foreach (var item in grainsPerSilo[silo]) grainIDsInSilo.AddRange(item.Value.Select(x => Helper.ConvertIntToGuid(x)));
                 
+                var data = MessagePackSerializer.Serialize(grainIDsInSilo);
+                siloInfo_db.HashSet(Constants.GeneralInfoPrefix + silo, "grainsInSilo", data);
+
                 foreach (var item in grainsPerSilo[silo])
                     foreach (var id in item.Value)
                         grainPlacement_db.HashSet(Constants.GrainIDPrefix + Helper.ConvertIntToGuid(id).ToString(), "SiloAddress", silo);
