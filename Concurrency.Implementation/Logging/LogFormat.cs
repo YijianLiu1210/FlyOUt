@@ -24,13 +24,13 @@ namespace Concurrency.Implementation.Logging
     public class CoordPrepareLog
     {
         [Key(0)]
-        public readonly Guid coordID;
+        public readonly GrainID coordID;
         [Key(1)]
         public readonly long tid;
         [Key(2)]
-        public readonly HashSet<Guid> participateGrains;
+        public readonly HashSet<GrainID> participateGrains;
 
-        public CoordPrepareLog(Guid coordID, long tid, HashSet<Guid> participateGrains)
+        public CoordPrepareLog(GrainID coordID, long tid, HashSet<GrainID> participateGrains)
         {
             this.coordID = coordID;
             this.tid = tid;
@@ -44,15 +44,15 @@ namespace Concurrency.Implementation.Logging
         [Key(0)]
         public readonly DateTime timestamp;
         [Key(1)]
-        public readonly Guid grainID;
+        public readonly GrainID grainID;
         [Key(2)]
         public readonly long tid;
         [Key(3)]
-        public readonly Guid coordID;
+        public readonly GrainID coordID;
         [Key(4)]
         public readonly byte[] state;
 
-        public PrepareLog(DateTime timestamp, Guid grainID, long tid, Guid coordID, byte[] state)
+        public PrepareLog(DateTime timestamp, GrainID grainID, long tid, GrainID coordID, byte[] state)
         {
             this.timestamp = timestamp;
             this.grainID = grainID;
@@ -66,11 +66,11 @@ namespace Concurrency.Implementation.Logging
     public class CoordCommitLog
     {
         [Key(0)]
-        public readonly Guid coordID;
+        public readonly GrainID coordID;
         [Key(1)]
         public readonly long tid;
 
-        public CoordCommitLog(Guid coordID, long tid)
+        public CoordCommitLog(GrainID coordID, long tid)
         {
             this.coordID = coordID;
             this.tid = tid;
@@ -81,11 +81,11 @@ namespace Concurrency.Implementation.Logging
     public class CommitLog
     {
         [Key(0)]
-        public readonly Guid grainID;
+        public readonly GrainID grainID;
         [Key(1)]
         public readonly long tid;
 
-        public CommitLog(Guid grainID, long tid)
+        public CommitLog(GrainID grainID, long tid)
         {
             this.grainID = grainID;
             this.tid = tid;
@@ -122,9 +122,9 @@ namespace Concurrency.Implementation.Logging
         [Key(3)]
         public readonly Guid globalCoordID;
         [Key(4)]
-        public readonly HashSet<Guid> participateGrains;
+        public readonly HashSet<GrainID> participateGrains;
 
-        public LocalBatchInfoLog(Guid localCoordID, long localBid, long globalBid, Guid globalCoordID, HashSet<Guid> participateGrains)
+        public LocalBatchInfoLog(Guid localCoordID, long localBid, long globalBid, Guid globalCoordID, HashSet<GrainID> participateGrains)
         { 
             this.localCoordID = localCoordID;
             this.localBid = localBid;
@@ -140,7 +140,7 @@ namespace Concurrency.Implementation.Logging
         [Key(0)]
         public readonly DateTime timestamp;
         [Key(1)]
-        public readonly Guid grainID;
+        public readonly GrainID grainID;
         [Key(2)]
         public readonly long localBid;
         [Key(3)]
@@ -148,7 +148,7 @@ namespace Concurrency.Implementation.Logging
         [Key(4)]
         public readonly byte[] state;
 
-        public LocalBatchCompleteLog(DateTime timestamp, Guid grainID, long localBid, Guid localCoordID, byte[] state)
+        public LocalBatchCompleteLog(DateTime timestamp, GrainID grainID, long localBid, Guid localCoordID, byte[] state)
         {
             this.timestamp = timestamp;
             this.grainID = grainID;

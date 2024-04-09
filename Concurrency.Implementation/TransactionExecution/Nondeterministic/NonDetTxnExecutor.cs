@@ -10,7 +10,7 @@ namespace Concurrency.Implementation.TransactionExecution
 {
     public class NonDetTxnExecutor<TState> where TState : ICloneable, IPrintable
     {
-        readonly Guid myID;
+        readonly GrainID myID;
         readonly string siloAddress;
         readonly ILocalCoordGrain myLocalCoord;
         readonly IGlobalCoordGrain myGlobalCoord;
@@ -36,7 +36,7 @@ namespace Concurrency.Implementation.TransactionExecution
         }
 
         public NonDetTxnExecutor(
-            Guid myID,
+            GrainID myID,
             string siloAddress,
             ILocalCoordGrain myLocalCoord,
             IGlobalCoordGrain myGlobalCoord,
@@ -59,7 +59,7 @@ namespace Concurrency.Implementation.TransactionExecution
             this.commitInfo = commitInfo;
         }
 
-        public async Task<TransactionContext> GetNonDetContext()
+        public async Task<MyTransactionContext> GetNonDetContext()
         {
             long tid;
             if (hierarchicalCoord)
@@ -75,7 +75,7 @@ namespace Concurrency.Implementation.TransactionExecution
                 commitInfo.MergeCommitInfoOfSilo("", info.Item2);
                 commitInfo.MergeCommitInfoOfSilo(siloAddress, info.Item3);
             }
-            return new TransactionContext(tid, myID);
+            return new MyTransactionContext(tid, myID);
         }
 
         public async Task<bool> WaitForTurn(long tid)
@@ -119,7 +119,7 @@ namespace Concurrency.Implementation.TransactionExecution
             }
         }
 
-        public async Task<TransactionResult> CallGrain(TransactionContext cxt, FunctionCall call, ITransactionExecutionGrain grain)
+        public async Task<TransactionResult> CallGrain(MyTransactionContext cxt, FunctionCall call, ITransactionExecutionGrain grain)
         {
             Tuple<NonDetFuncResult, DateTime> funcResult;
             var t = grain.ExecuteNonDet(call, cxt);

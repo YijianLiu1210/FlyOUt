@@ -14,6 +14,7 @@ using Concurrency.Interface.GrainPlacement;
 using StackExchange.Redis;
 using MessagePack;
 using System.Linq;
+using System.Diagnostics;
 
 namespace Concurrency.Implementation.TransactionExecution
 {
@@ -23,7 +24,7 @@ namespace Concurrency.Implementation.TransactionExecution
     public abstract class TransactionExecutionGrain<TState> : Grain, ITransactionExecutionGrain where TState : ICloneable, IPrintable, new()
     {
         // grain basic info
-        Guid myID;
+        GrainID myID;
         readonly IGrainPlacementCache grainPlacementCache;
         readonly IDatabase grainPlacement_db;
         bool hierarchicalCoord;
@@ -39,7 +40,7 @@ namespace Concurrency.Implementation.TransactionExecution
 
         // ACT execution
         IGlobalCoordGrain myGlobalCoord;
-        Dictionary<long, Guid> coordinatorMap;
+        Dictionary<long, GrainID> coordinatorMap;
         NonDetTxnExecutor<TState> nonDetTxnExecutor;
         NonDetCommitter<TState> nonDetCommitter;
         Dictionary<string, ILocalCoordGrain> myLocalCoordPerSilo;
@@ -76,7 +77,7 @@ namespace Concurrency.Implementation.TransactionExecution
             nonDetTxnExecutor.CheckGC();
             nonDetCommitter.CheckGC();
             if (batchCommit.Count != 0) Console.WriteLine($"TransactionExecutionGrain: batchCommit.Count = {batchCommit.Count}");
-            if (coordinatorMap.Count != 0) Console.WriteLine($"TransactionExecutionGrain: coordinatorMap.Count = {coordinatorMap.Count}");
+            if (coordinatorMap.Count != 0) Console.WriteLine($"TransactionExecutionGrain-{myID.className}: coordinatorMap.Count = {coordinatorMap.Count}, tid = {coordinatorMap.First().Key}");
             if (statePerBatch.Count > 1) Console.WriteLine($"TransactionExecutionGrain: statePerBatch.Count = {statePerBatch.Count}");
             return Task.CompletedTask;
         }
@@ -86,7 +87,10 @@ namespace Concurrency.Implementation.TransactionExecution
         {
             underMigration = true;
 
-            myID = this.GetPrimaryKey();
+            var guid = this.GetPrimaryKey();
+            var strs = this.GrainReference.ToString().Split("/");
+            Debug.Assert(strs.Length == 3);
+            myID = new GrainID(guid, strs[1]);
             numToBeRegisteredTxn = new MyCounter();
             highestCommittedLocalBidOnGrain = -1;
             highestCommittedGlobalBidOnGrain = -1;
@@ -96,14 +100,14 @@ namespace Concurrency.Implementation.TransactionExecution
             // transaction execution
             myScheduler = new TransactionScheduler(myID);
             batchCommit = new SortedDictionary<long, TaskCompletionSource>();
-            coordinatorMap = new Dictionary<long, Guid>();
+            coordinatorMap = new Dictionary<long, GrainID>();
             commitInfo = new CommitInfo();
             commitInfo.highestCommittedLocalBidPerSilo.Add(RuntimeIdentity, -1);
             statePerBatch = new SortedDictionary<long, Tuple<DateTime, byte[]>>();
             lastPreparedState = new Dictionary<DateTime, byte[]> { { DateTime.MinValue, null } };
 
             // add its own info to local cache
-            grainPlacementCache.AddUserGrain(myID, RuntimeIdentity);
+            grainPlacementCache.AddUserGrain(myID.id, RuntimeIdentity);
 
             // select a random GrainPlacementManager locate in the current silo
             var managerID = grainPlacementCache.GetOneRandomPMInSilo(RuntimeIdentity);
@@ -111,7 +115,7 @@ namespace Concurrency.Implementation.TransactionExecution
 
             // select a random GrainMigrationWorker locate in the current silo
             var workerID = grainPlacementCache.GetOneRandomMWInSilo(RuntimeIdentity);
-            await grainPlacement_db.HashSetAsync(Constants.GrainIDPrefix + myID.ToString(), "MigrationWorker", workerID.ToString());
+            await grainPlacement_db.HashSetAsync(Constants.GrainIDPrefix + myID.id.ToString(), "MigrationWorker", workerID.ToString());
 
             state = new HybridState<TState>(new TState());
 
@@ -253,7 +257,7 @@ namespace Concurrency.Implementation.TransactionExecution
         }
 
         /// <summary> This interface is called by clients to start a PACT </summary>
-        public async Task<TransactionResult> StartTransaction(string startFunc, object funcInput, List<Guid> grainAccessInfo)
+        public async Task<TransactionResult> StartTransaction(string startFunc, object funcInput, List<GrainID> grainAccessInfo)
         {
             var receiveTxnTime = DateTime.Now;
             if (underMigration) throw new SnapperGrainMigrationException($"grain {myID}: Fail to StartTxn for PACT, grain is under migration, try again later");
@@ -285,18 +289,19 @@ namespace Concurrency.Implementation.TransactionExecution
         /// <summary> This interface is called by clients to start an ACT </summary>
         public async Task<TransactionResult> StartTransaction(string startFunc, object funcInput)
         {
+            //Console.WriteLine($"Grain {Helper.ConvertGuidToInt(this.GetPrimaryKey())}-{this.GrainReference}: receive txn {startFunc}");
             var receiveTxnTime = DateTime.Now;
             if (underMigration) throw new SnapperGrainMigrationException($"grain {myID}: Fail to StartTxn for ACT, grain is under migration, try again later");
             var cxt = await nonDetTxnExecutor.GetNonDetContext();
             var getContextTime = DateTime.Now;
-            
+            //Console.WriteLine($"Grain {Helper.ConvertGuidToInt(this.GetPrimaryKey())}: get context, gtid = {cxt.globalTid}, ltid = {cxt.localTid}");
             // execute ACT
             var call = new FunctionCall(startFunc, funcInput, GetType());
             var res1 = await ExecuteNonDet(call, cxt);
             var finishExeTime = DateTime.Now;
             var startExeTime = res1.Item2;
             var funcResult = res1.Item1;
-
+            //Console.WriteLine($"Grain {Helper.ConvertGuidToInt(this.GetPrimaryKey())}: finish exe");
             // check serializability and do 2PC
             var canCommit = !funcResult.exception;
             var res = new TransactionResult(funcResult.resultObj);
@@ -310,6 +315,7 @@ namespace Concurrency.Implementation.TransactionExecution
                 {
                     isPrepared = true;
                     canCommit = await nonDetCommitter.CoordPrepare(cxt.globalTid, funcResult.grainOpInfo);
+                    //Console.WriteLine($"Grain {Helper.ConvertGuidToInt(this.GetPrimaryKey())}: finish prepare");
                 }
                 else
                 {
@@ -413,14 +419,14 @@ namespace Concurrency.Implementation.TransactionExecution
         }
 
         /// <summary> When execute a transaction on the grain, call this interface to read / write grain state </summary>
-        public async Task<TState> GetState(TransactionContext cxt, AccessMode mode)
+        public async Task<TState> GetState(MyTransactionContext cxt, AccessMode mode)
         {
             var isDet = cxt.localBid != -1;
             if (isDet) return detTxnExecutor.GetState(cxt.localTid, mode);
             else return await nonDetTxnExecutor.GetState(cxt.globalTid, mode);
         }
 
-        public async Task<Tuple<object, DateTime>> ExecuteDet(FunctionCall call, TransactionContext cxt)
+        public async Task<Tuple<object, DateTime>> ExecuteDet(FunctionCall call, MyTransactionContext cxt)
         {
             await detTxnExecutor.WaitForTurn(cxt);
             var time = DateTime.Now;
@@ -430,7 +436,7 @@ namespace Concurrency.Implementation.TransactionExecution
             return new Tuple<object, DateTime>(txnRes.resultObj, time);
         }
 
-        public async Task<Tuple<NonDetFuncResult, DateTime>> ExecuteNonDet(FunctionCall call, TransactionContext cxt)
+        public async Task<Tuple<NonDetFuncResult, DateTime>> ExecuteNonDet(FunctionCall call, MyTransactionContext cxt)
         {
             if (underMigration)
             {
@@ -457,7 +463,8 @@ namespace Concurrency.Implementation.TransactionExecution
                 try
                 {
                     var txnRes = await InvokeFunction(call, cxt);
-                    resultObj = txnRes.resultObj;
+                    if (!txnRes.exception) resultObj = txnRes.resultObj;
+                    else exception = true;
                 }
                 catch (SnapperDeadlockException)
                 {
@@ -472,7 +479,8 @@ namespace Concurrency.Implementation.TransactionExecution
 
                 var funcResult = nonDetTxnExecutor.UpdateExecutionResult(cxt.globalTid);
                 if (resultObj != null) funcResult.SetResultObj(resultObj);
-
+                if (exception) funcResult.exception = true;      // !!!!!!!
+                
                 nonDetTxnExecutor.CleanUp(cxt.globalTid);
                 if (exception) CleanUp(cxt.globalTid);
 
@@ -480,7 +488,7 @@ namespace Concurrency.Implementation.TransactionExecution
             }
         }
 
-        async Task<TransactionResult> InvokeFunction(FunctionCall call, TransactionContext cxt)
+        async Task<TransactionResult> InvokeFunction(FunctionCall call, MyTransactionContext cxt)
         {
             if (cxt.localBid == -1)
             {
@@ -493,9 +501,9 @@ namespace Concurrency.Implementation.TransactionExecution
         }
 
         /// <summary> When execute a transaction, call this interface to make a cross-grain function invocation </summary>
-        public Task<TransactionResult> CallGrain(TransactionContext cxt, Guid grainID, FunctionCall call)
+        public Task<TransactionResult> CallGrain(MyTransactionContext cxt, Guid grainID, string grainClassName, FunctionCall call)
         {
-            var grain = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID, Constants.grainClassName);
+            var grain = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID, grainClassName);
             var isDet = cxt.localBid != -1;
             if (isDet) return detTxnExecutor.CallGrain(cxt, call, grain);
             else return nonDetTxnExecutor.CallGrain(cxt, call, grain);

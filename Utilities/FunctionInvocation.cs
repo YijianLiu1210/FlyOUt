@@ -67,13 +67,13 @@ namespace Utilities
         public object resultObj;
         public bool isNoOpOnGrain;
         public bool isReadOnlyOnGrain;
-        public Dictionary<Guid, OpOnGrain> grainOpInfo;   // <grainID, operations performed on the grains>
+        public Dictionary<GrainID, OpOnGrain> grainOpInfo;   // <grainID, operations performed on the grains>
 
         public BasicFuncResult()
         {
             isNoOpOnGrain = true;
             isReadOnlyOnGrain = true;
-            grainOpInfo = new Dictionary<Guid, OpOnGrain>();
+            grainOpInfo = new Dictionary<GrainID, OpOnGrain>();
         }
 
         public void SetResultObj(object resultObj)

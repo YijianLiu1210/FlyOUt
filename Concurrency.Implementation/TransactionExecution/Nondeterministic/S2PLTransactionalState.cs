@@ -127,7 +127,8 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
 
         public Task<bool> Prepare(long tid, bool isReader)
         {
-            Debug.Assert(waitinglist.ContainsKey(tid) && isReader == waitinglist[tid].Item1);
+            Debug.Assert(waitinglist.ContainsKey(tid));
+            Debug.Assert(isReader == waitinglist[tid].Item1);
             if (isReader) CleanUpAndSignal(tid);   // release the read lock directly
             return Task.FromResult(true);
         }

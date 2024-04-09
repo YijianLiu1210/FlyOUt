@@ -11,7 +11,7 @@ using System.Diagnostics;
 
 namespace SmallBank.Grains
 {
-    using MultiTransferInput = Tuple<int, List<Guid>>;  // money, List<to account>
+    using MultiTransferInput = Tuple<int, List<GrainID>>;  // money, List<to account>
 
     public class SnapperTransactionalAccountGrain : TransactionExecutionGrain<BankAccount>, ISnapperTransactionalAccountGrain
     {
@@ -21,7 +21,7 @@ namespace SmallBank.Grains
 
         public Task<string> GetSiloAddress() => Task.FromResult(this.RuntimeIdentity);
 
-        public async Task<TransactionResult> Init(TransactionContext context, object funcInput)
+        public async Task<TransactionResult> Init(MyTransactionContext context, object funcInput)
         {
             var accountID = (Guid)funcInput;
             var myState = await GetState(context, AccessMode.ReadWrite);
@@ -30,7 +30,7 @@ namespace SmallBank.Grains
             return new TransactionResult();
         }
 
-        public async Task<TransactionResult> MultiTransfer(TransactionContext context, object funcInput)
+        public async Task<TransactionResult> MultiTransfer(MyTransactionContext context, object funcInput)
         {
             var input = (MultiTransferInput)funcInput;
             var money = input.Item1;
@@ -42,16 +42,16 @@ namespace SmallBank.Grains
             var task = new List<Task>();
             foreach (var accountID in toAccounts)
             {
-                Debug.Assert(accountID != myState.accountID);
+                Debug.Assert(accountID.id != myState.accountID);
                 var funcCall = new FunctionCall("Deposit", money, typeof(SnapperTransactionalAccountGrain));
-                var t = CallGrain(context, accountID, funcCall);
+                var t = CallGrain(context, accountID.id, accountID.className, funcCall);
                 task.Add(t);
             }
             await Task.WhenAll(task);
             return new TransactionResult();
         }
        
-        public async Task<TransactionResult> Deposit(TransactionContext context, object funcInput)
+        public async Task<TransactionResult> Deposit(MyTransactionContext context, object funcInput)
         {
             var money = (int)funcInput;
             var myState = await GetState(context, AccessMode.ReadWrite);
@@ -59,7 +59,7 @@ namespace SmallBank.Grains
             return new TransactionResult();
         }
 
-        public async Task<TransactionResult> Balance(TransactionContext context, object funcInput)
+        public async Task<TransactionResult> Balance(MyTransactionContext context, object funcInput)
         {
             var myState = await GetState(context, AccessMode.Read);
             return new TransactionResult(myState.balance);

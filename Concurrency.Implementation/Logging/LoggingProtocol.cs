@@ -64,11 +64,11 @@ namespace Concurrency.Implementation.Logging
 
         public bool IsLoggingEnabled() => isLoggingEnabled;
 
-        public async Task<byte[]> GetLastCommittedGrainStateFromLog(Guid grainID, long lastCommittedLocalBid)
+        public async Task<byte[]> GetLastCommittedGrainStateFromLog(GrainID grainID, long lastCommittedLocalBid)
         {
             Debug.Assert(isLoggingEnabled);
             Debug.Assert(loggerOfLocalBatchComplete.Length == loggerOfPrepare.Length);
-            var id = Helper.MapGuidToServiceID(grainID, loggerOfLocalBatchComplete.Length);
+            var id = Helper.MapGuidToServiceID(grainID.id, loggerOfLocalBatchComplete.Length);
             var t1 = loggerOfPrepare[id].ReadGrainState(grainID);
             var t2 = loggerOfLocalBatchComplete[id].ReadGrainState(grainID, lastCommittedLocalBid);
             await Task.WhenAll(t1, t2);
@@ -86,6 +86,7 @@ namespace Concurrency.Implementation.Logging
                 {
                     var numPartitionPerGlobalLogFile = numLocalSilo * 2;
                     loggerOfGlobalBatchInfo = new ISnapperLogger[numPartitionPerGlobalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {numPartitionPerGlobalLogFile} loggers for GlobalBatchInfo");
 
                     for (int i = 0; i < numPartitionPerGlobalLogFile; i++)
                         loggerOfGlobalBatchInfo[i] = new SnapperLogger(siloID, LogContentType.GlobalBatchInfo, i);
@@ -94,13 +95,21 @@ namespace Concurrency.Implementation.Logging
                 {
                     // loggers used by local coordinators
                     loggerOfLocalBatchInfo = new ISnapperLogger[Constants.numPartitionPerLocalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {Constants.numPartitionPerLocalLogFile} loggers for LocalBatchInfo");
                     loggerOfLocalBatchCommit = new ISnapperLogger[Constants.numPartitionPerLocalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {Constants.numPartitionPerLocalLogFile} loggers for LocalBatchCommit");
+
                     // loggers used by grains
                     loggerOfCoordPrepare = new ISnapperLogger[Constants.numPartitionPerLocalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {Constants.numPartitionPerLocalLogFile} loggers for CoordPrepare");
                     loggerOfPrepare = new ISnapperLogger[Constants.numPartitionPerLocalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {Constants.numPartitionPerLocalLogFile} loggers for Prepare");
                     loggerOfCoordCommit = new ISnapperLogger[Constants.numPartitionPerLocalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {Constants.numPartitionPerLocalLogFile} loggers for CoordCommit");
                     loggerOfCommit = new ISnapperLogger[Constants.numPartitionPerLocalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {Constants.numPartitionPerLocalLogFile} loggers for Commit");
                     loggerOfLocalBatchComplete = new ISnapperLogger[Constants.numPartitionPerLocalLogFile];
+                    Console.WriteLine($"LoggingProtocol: init {Constants.numPartitionPerLocalLogFile} loggers for LocalBatchComplete");
 
                     for (int i = 0; i < Constants.numPartitionPerLocalLogFile; i++)
                     {
@@ -152,30 +161,30 @@ namespace Concurrency.Implementation.Logging
             }
         }
 
-        public async Task CoordPrepare(Guid coordID, long tid, HashSet<Guid> participateGrains)
+        public async Task CoordPrepare(GrainID coordID, long tid, HashSet<GrainID> participateGrains)
         {
-            var id = Helper.MapGuidToServiceID(coordID, loggerOfCoordPrepare.Length);
+            var id = Helper.MapGuidToServiceID(coordID.id, loggerOfCoordPrepare.Length);
             var logContent = MessagePackSerializer.Serialize(new CoordPrepareLog(coordID, tid, participateGrains));
             await loggerOfCoordPrepare[id].Write(MessagePackSerializer.Serialize(new LogFormat(LogContentType.CoordPrepare, logContent)));
         }
 
-        public async Task Prepare(Guid grainID, long tid, Guid coordID, byte[] state, DateTime timestamp)
+        public async Task Prepare(GrainID grainID, long tid, GrainID coordID, byte[] state, DateTime timestamp)
         {
-            var id = Helper.MapGuidToServiceID(grainID, loggerOfPrepare.Length);
+            var id = Helper.MapGuidToServiceID(grainID.id, loggerOfPrepare.Length);
             var logContent = MessagePackSerializer.Serialize(new PrepareLog(timestamp, grainID, tid, coordID, state));
             await loggerOfPrepare[id].Write(MessagePackSerializer.Serialize(new LogFormat(LogContentType.Prepare, logContent)));
         }
 
-        public async Task CoordCommit(Guid coordID, long tid)
+        public async Task CoordCommit(GrainID coordID, long tid)
         {
-            var id = Helper.MapGuidToServiceID(coordID, loggerOfCoordCommit.Length);
+            var id = Helper.MapGuidToServiceID(coordID.id, loggerOfCoordCommit.Length);
             var logContent = MessagePackSerializer.Serialize(new CoordCommitLog(coordID, tid));
             await loggerOfCoordCommit[id].Write(MessagePackSerializer.Serialize(new LogFormat(LogContentType.CoordCommit, logContent)));
         }
 
-        public async Task Commit(Guid grainID, long tid)
+        public async Task Commit(GrainID grainID, long tid)
         {
-            var id = Helper.MapGuidToServiceID(grainID, loggerOfCommit.Length);
+            var id = Helper.MapGuidToServiceID(grainID.id, loggerOfCommit.Length);
             var logContent = MessagePackSerializer.Serialize(new CommitLog(grainID, tid));
             await loggerOfCommit[id].Write(MessagePackSerializer.Serialize(new LogFormat(LogContentType.Commit, logContent)));
         }
@@ -187,16 +196,16 @@ namespace Concurrency.Implementation.Logging
             await loggerOfGlobalBatchInfo[id].Write(MessagePackSerializer.Serialize(new LogFormat(LogContentType.GlobalBatchInfo, logContent)));
         }
 
-        public async Task LocalBatchInfo(Guid localCoordID, long localBid, long globalBid, Guid globalCoordID, HashSet<Guid> participateGrains)
+        public async Task LocalBatchInfo(Guid localCoordID, long localBid, long globalBid, Guid globalCoordID, HashSet<GrainID> participateGrains)
         {
             var id = Helper.MapGuidToServiceID(localCoordID, loggerOfLocalBatchInfo.Length);
             var logContent = MessagePackSerializer.Serialize(new LocalBatchInfoLog(localCoordID, localBid, globalBid, globalCoordID, participateGrains));
             await loggerOfLocalBatchInfo[id].Write(MessagePackSerializer.Serialize(new LogFormat(LogContentType.LocalBatchInfo, logContent)));
         }
 
-        public async Task LocalBatchComplete(Guid grainID, long localBid, Guid localCoordID, byte[] state, DateTime timestamp)
+        public async Task LocalBatchComplete(GrainID grainID, long localBid, Guid localCoordID, byte[] state, DateTime timestamp)
         {
-            var id = Helper.MapGuidToServiceID(grainID, loggerOfLocalBatchComplete.Length);
+            var id = Helper.MapGuidToServiceID(grainID.id, loggerOfLocalBatchComplete.Length);
             var logContent = MessagePackSerializer.Serialize(new LocalBatchCompleteLog(timestamp, grainID, localBid, localCoordID, state));
             await loggerOfLocalBatchComplete[id].Write(MessagePackSerializer.Serialize(new LogFormat(LogContentType.LocalBatchComplete, logContent)));
         }

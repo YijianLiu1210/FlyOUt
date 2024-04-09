@@ -9,13 +9,13 @@ namespace Concurrency.Implementation.TransactionExecution
 {
     public class TransactionScheduler
     {
-        readonly Guid myID;
+        readonly GrainID myID;
         public ScheduleInfo scheduleInfo;
         Dictionary<long, SubBatch> batchInfo;                         // key: local bid
         Dictionary<long, long> tidToLastTid;
         Dictionary<long, TaskCompletionSource> detExecutionPromise;   // key: local tid
        
-        public TransactionScheduler(Guid myID)
+        public TransactionScheduler(GrainID myID)
         {
             this.myID = myID;
             scheduleInfo = new ScheduleInfo(myID);

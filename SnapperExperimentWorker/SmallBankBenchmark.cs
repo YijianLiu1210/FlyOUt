@@ -22,19 +22,19 @@ namespace SnapperExperimentWorker
             transferAmountDistribution = new DiscreteUniform(0, 10, new Random());
         }
 
-        Task<TransactionResult> Execute(IClusterClient client, Guid grainId, string startFunc, object funcInput, List<Guid> grainIDList)
+        Task<TransactionResult> Execute(IClusterClient client, GrainID grainId, string startFunc, object funcInput, List<GrainID> grainIDList)
         {
             switch (implementationType)
             {
                 case ImplementationType.SNAPPER:
-                    var grain = client.GetGrain<ISnapperTransactionalAccountGrain>(grainId);
+                    var grain = client.GetGrain<ISnapperTransactionalAccountGrain>(grainId.id);
                     if (isDet) return grain.StartTransaction(startFunc, funcInput, grainIDList);
                     else return grain.StartTransaction(startFunc, funcInput);
                 case ImplementationType.NONTXN:
-                    var eventuallyConsistentGrain = client.GetGrain<INonTransactionalAccountGrain>(grainId);
+                    var eventuallyConsistentGrain = client.GetGrain<INonTransactionalAccountGrain>(grainId.id);
                     return eventuallyConsistentGrain.StartTransaction(startFunc, funcInput);
                 case ImplementationType.ORLEANSTXN:
-                    var txnGrain = client.GetGrain<IOrleansTransactionalAccountGrain>(grainId);
+                    var txnGrain = client.GetGrain<IOrleansTransactionalAccountGrain>(grainId.id);
                     return txnGrain.StartTransaction(startFunc, funcInput);
                 default:
                     return null;
@@ -46,13 +46,13 @@ namespace SnapperExperimentWorker
             var accountGrains = data.grains;
             //accountGrains.Sort();
 
-            var grainIDList = new List<Guid>(accountGrains);
+            var grainIDList = new List<GrainID>(accountGrains);
 
             var firstGrainID = accountGrains.First();
             accountGrains.RemoveAt(0);
 
             var money = transferAmountDistribution.Sample();
-            var args = new Tuple<int, List<Guid>>(money, accountGrains);
+            var args = new Tuple<int, List<GrainID>>(money, accountGrains);
             var task = Execute(client, firstGrainID, "MultiTransfer", args, grainIDList);
             return task;
         }

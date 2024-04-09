@@ -15,7 +15,7 @@ namespace Concurrency.Implementation.TransactionExecution
     public class DetTxnExecutor<TState> where TState : ICloneable, IPrintable
     {
         // grain basic info
-        readonly Guid myID;
+        readonly GrainID myID;
         readonly string siloAddress;
         readonly IGrainFactory myGrainFactory;
 
@@ -46,7 +46,7 @@ namespace Concurrency.Implementation.TransactionExecution
         }
 
         public DetTxnExecutor(
-            Guid myID,
+            GrainID myID,
             string siloAddress,
             IGrainFactory myGrainFactory,
             TransactionScheduler myScheduler,
@@ -73,7 +73,7 @@ namespace Concurrency.Implementation.TransactionExecution
             globalBtchInfoPromise = new Dictionary<long, TaskCompletionSource>();
         }
 
-        public async Task<TransactionContext> GetDetContext(List<Guid>  grainAccessInfo)
+        public async Task<MyTransactionContext> GetDetContext(List<GrainID>  grainAccessInfo)
         {
             var info = await myGrainPlacementManager.NewTransaction(grainAccessInfo);
             commitInfo.MergeCommitInfoOfSilo("", info.Item2);
@@ -81,7 +81,7 @@ namespace Concurrency.Implementation.TransactionExecution
             return info.Item1;
         }
 
-        public async Task WaitForTurn(TransactionContext cxt)
+        public async Task WaitForTurn(MyTransactionContext cxt)
         {
             // check if it is a global PACT
             if (cxt.globalBid != -1)
@@ -108,7 +108,7 @@ namespace Concurrency.Implementation.TransactionExecution
             await myScheduler.WaitForTurn(cxt.localBid, cxt.localTid);
         }
 
-        public async Task FinishExecuteDetTxn(TransactionContext cxt)
+        public async Task FinishExecuteDetTxn(MyTransactionContext cxt)
         {
             var tuple = myScheduler.AckComplete(cxt.localBid, cxt.localTid);
             if (tuple.Item1)   // the current batch has completed on this grain
@@ -175,7 +175,7 @@ namespace Concurrency.Implementation.TransactionExecution
             return res;
         }
 
-        public async Task<TransactionResult> CallGrain(TransactionContext cxt, FunctionCall call, ITransactionExecutionGrain grain)
+        public async Task<TransactionResult> CallGrain(MyTransactionContext cxt, FunctionCall call, ITransactionExecutionGrain grain)
         {
             var resultObj = (await grain.ExecuteDet(call, cxt)).Item1;
             return new TransactionResult(resultObj);

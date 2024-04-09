@@ -109,4 +109,10 @@
         <implementation>   SNAPPER </implementation>
         <isLoggingEnabled> true    </isLoggingEnabled>
     </experimentID>
+
+    <experimentID id = '61'>
+        <numLocalSilo>     2      </numLocalSilo>
+        <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
 </root>

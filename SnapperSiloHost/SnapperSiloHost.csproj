@@ -38,6 +38,8 @@
 		<ProjectReference Include="..\Concurrency.Interface\Concurrency.Interface.csproj" />
 		<ProjectReference Include="..\SmallBank.Grains\SmallBank.Grains.csproj" />
 		<ProjectReference Include="..\SmallBank.Interfaces\SmallBank.Interfaces.csproj" />
+		<ProjectReference Include="..\TPCC.Grains\TPCC.Grains.csproj" />
+		<ProjectReference Include="..\TPCC.Interfaces\TPCC.Interfaces.csproj" />
 		<ProjectReference Include="..\Utilities\Utilities.csproj" />
 	</ItemGroup>
 </Project>

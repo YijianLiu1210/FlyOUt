@@ -83,7 +83,7 @@ namespace SnapperExperimentWorker
                 while (tasks.Count < pipeSize && queue.TryDequeue(out req))
                 {
                     var worker = req.Item1;
-                    var grainID = req.Item2;
+                    var grainID = new GrainID(req.Item2, Constants.grainClassName);
                     var targetSilo = req.Item3;
                     var startTxnTime = DateTime.Now;
                     var t = worker.MigrateGrain(grainID, targetSilo);

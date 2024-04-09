@@ -280,6 +280,10 @@ namespace SnapperExperimentWorker
                     benchmarks = new SmallBankBenchmark[numDetConsumer + numNonDetConsumer];
                     for (int i = 0; i < numDetConsumer + numNonDetConsumer; i++) benchmarks[i] = new SmallBankBenchmark();
                     break;
+                case BenchmarkType.TPCC:
+                    benchmarks = new TPCCBenchmark[numDetConsumer + numNonDetConsumer];
+                    for (int i = 0; i < numDetConsumer + numNonDetConsumer; i++) benchmarks[i] = new TPCCBenchmark();
+                    break;
                 default:
                     throw new Exception("Exception: SnapperExperimentWorker only support SmallBank and TPCC benchmarks");
             }

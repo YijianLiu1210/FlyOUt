@@ -71,7 +71,7 @@ namespace SnapperSiloHost
                 siloPort += 1 + siloID;
                 gatewayPort += 1 + siloID;
             }
-            
+
             return RunMainAsync().Result;
         }
 
@@ -161,7 +161,7 @@ namespace SnapperSiloHost
 
             var siloHost = builder.Build();
             await siloHost.StartAsync();
-            Console.WriteLine($"Silo: isGlobalSilo {isGlobalSilo}, is started");
+            Console.WriteLine($"Silo: isGlobalSilo {isGlobalSilo}, is started, siloPort = {siloPort}, gatewayPort = {gatewayPort}");
 
             // =========================================================================================================================
             // get SiloAddress by reading the dynamoDB table

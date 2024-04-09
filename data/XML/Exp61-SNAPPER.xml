@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<root>       
+    <batchSizeInMSecsBasic> 20 </batchSizeInMSecsBasic>
+
+    <pactPercent> 0 </pactPercent>
+            
+	<actPipeSize>   1 </actPipeSize>  
+	<pactPipeSize>  1 </pactPipeSize>
+</root>

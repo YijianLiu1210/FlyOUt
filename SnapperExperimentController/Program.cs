@@ -40,7 +40,9 @@ namespace SnapperExperimentController
             var optimizeCommit = bool.Parse(args[6]);
             var optimizeBatching = bool.Parse(args[7]);
             redis_ConnectionString = args[8];
-            GenerateWorkLoadFromXMLFile(experimentID, implementationType);
+            if (Constants.benchmark == BenchmarkType.SMALLBANK) GenerateSmallBankWorkLoadFromXMLFile(experimentID, implementationType);
+            else if (Constants.benchmark == BenchmarkType.TPCC) GenerateTPCCWorkLoadFromXMLFile(experimentID, implementationType);
+
             Console.WriteLine($"ExpController: experimentID = {experimentID}, " +
                 $"numLocalSilo = {numLocalSilo}, implementationType = {implementationType}, isLoggingEnabled = {isLoggingEnabled} " +
                 $"hierarchicalCoord = {hierarchicalCoord}, optimizeCommit = {optimizeCommit}, optimizeBatching = {optimizeBatching}");
@@ -125,7 +127,7 @@ namespace SnapperExperimentController
             TerminateWorkers();
         }
 
-        static void GenerateWorkLoadFromXMLFile(string experimentID, ImplementationType implementationType)
+        static void GenerateSmallBankWorkLoadFromXMLFile(string experimentID, ImplementationType implementationType)
         {
             var path = Constants.dataPath + @$"XML\Exp{experimentID}-{implementationType}.xml";
             var xmlDoc = new XmlDocument();
@@ -180,6 +182,38 @@ namespace SnapperExperimentController
             }
         }
 
+        static void GenerateTPCCWorkLoadFromXMLFile(string experimentID, ImplementationType implementationType)
+        {
+            var path = Constants.dataPath + @$"XML\Exp{experimentID}-{implementationType}.xml";
+            var xmlDoc = new XmlDocument();
+            xmlDoc.Load(path);
+            var rootNode = xmlDoc.DocumentElement;
+
+            var batchSizeGroup = Array.ConvertAll(rootNode.SelectSingleNode("batchSizeInMSecsBasic").FirstChild.Value.Split(","), x => int.Parse(x));
+
+            var pactPercentGroup = Array.ConvertAll(rootNode.SelectSingleNode("pactPercent").FirstChild.Value.Split(","), x => int.Parse(x));
+
+            var actPipeSizeGroup = Array.ConvertAll(rootNode.SelectSingleNode("actPipeSize").FirstChild.Value.Split(","), x => int.Parse(x));
+            var pactPipeSizeGroup = Array.ConvertAll(rootNode.SelectSingleNode("pactPipeSize").FirstChild.Value.Split(","), x => int.Parse(x));
+
+            workloadGroup = new List<WorkloadConfiguration>();
+            for (var i = 0; i < batchSizeGroup.Length; i++)
+            {
+                var batchSizeInMSecsBasic = batchSizeGroup[i];
+                for (var j = 0; j < pactPercentGroup.Length; j++)
+                {
+                    var pactPercent = pactPercentGroup[j];
+                    for (var k = 0; k < actPipeSizeGroup.Length; k++)
+                    {
+                        var actPipeSize = actPipeSizeGroup[k];
+                        var pactPipeSize = pactPipeSizeGroup[k];
+                        var workload = new WorkloadConfiguration(-2, -2, batchSizeInMSecsBasic, pactPercent, -2, -2, actPipeSize, pactPipeSize, -2);
+                        workloadGroup.Add(workload);
+                    }
+                }
+            }
+        }
+
         static void ConnectSilos()
         {
             NetworkMessage msg;
@@ -189,6 +223,7 @@ namespace SnapperExperimentController
             {
                 msg = MessagePackSerializer.Deserialize<NetworkMessage>(pullFromSiloSocket.ReceiveFrameBytes());
                 Trace.Assert(msg.msgType == NetMsgType.CONNECT);
+                Console.WriteLine($"ExpController: get one connection by silo");
             }
 
             Console.WriteLine($"ExpController: publish {NetMsgType.START_GLOBAL_SILO} message");
@@ -304,7 +339,7 @@ namespace SnapperExperimentController
 
             Console.WriteLine("ExpController: wait to check GC");
             Thread.Sleep(5000);
-            serverConnector.CheckGC(isGrainMigrationExp);
+            serverConnector.CheckGC();
         }
 
         static void PullFromWorkers(object obj)

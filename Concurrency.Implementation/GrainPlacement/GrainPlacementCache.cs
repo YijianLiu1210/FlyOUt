@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Threading;
 using StackExchange.Redis;
 using Utilities;
+using Orleans;
+using System.Linq;
 
 namespace Concurrency.Implementation.GrainPlacement
 {
@@ -68,16 +70,33 @@ namespace Concurrency.Implementation.GrainPlacement
         {
             GetGlobalSiloAddress();
 
-            Console.WriteLine($"Write all grain placement info into cache...");
+            Console.WriteLine($"Write all grain placement info into cache, grainIDToSilo already contains {grainIDToSilo.Count} entries. ");
 
-            var registeredSilo = Helper.GetLocalSiloList(siloInfo_db);
-            grainInfoLock.Wait();
-            for (int i = 0; i < (isGrainMigrationExp ? registeredSilo.Count / 2 : registeredSilo.Count); i++)
+            if (Constants.benchmark == BenchmarkType.SMALLBANK)
             {
-                var grains = Helper.GetGrainsOfSilo(i);
-                foreach (var id in grains) grainIDToSilo[id] = registeredSilo[i];
+                var registeredSilo = Helper.GetLocalSiloList(siloInfo_db);
+                grainInfoLock.Wait();
+                for (int i = 0; i < (isGrainMigrationExp ? registeredSilo.Count / 2 : registeredSilo.Count); i++)
+                {
+                    var grains = Helper.GetGrainsOfSilo(i);
+                    foreach (var id in grains) grainIDToSilo[id] = registeredSilo[i];
+                }
+                grainInfoLock.Release();
             }
-            grainInfoLock.Release();
+            else if (Constants.benchmark == BenchmarkType.TPCC)
+            {
+                var keys = redisServer.Keys(Constants.Redis_GrainPlacementMap, Constants.GrainIDPrefix + "*");
+                Console.WriteLine($"find {keys.Count()} grain IDs");
+                foreach (var key in keys)
+                {
+                    var grainID = Guid.Parse(key.ToString().Split("+")[1]);
+
+                    var silo = grainPlacement_db.HashGet(key, "SiloAddress").ToString();
+                    if (string.IsNullOrEmpty(silo)) throw new SnapperStorageException($"SiloAddress info of grain {grainID} is not in Redis {Constants.Redis_GrainPlacementMap}, key = {key}");
+                    grainIDToSilo[grainID] = silo;
+                }
+            }
+
             initializationDone = true;
             Console.WriteLine($"Get info of {grainIDToSilo.Count} grains");
         }
@@ -160,7 +179,7 @@ namespace Concurrency.Implementation.GrainPlacement
                 if (grainIDToMW.ContainsKey(grainID) == false)  // check again after get the lock
                 {
                     var str = grainPlacement_db.HashGet(Constants.GrainIDPrefix + grainID.ToString(), "MigrationWorker").ToString();
-                    if (str == null) throw new SnapperStorageException($"MigrationWorker info of grain {grainID} is not in Redis {Constants.Redis_GrainPlacementMap}");
+                    if (string.IsNullOrEmpty(str)) throw new SnapperStorageException($"MigrationWorker info of grain {grainID} is not in Redis {Constants.Redis_GrainPlacementMap}");
                     grainIDToMW[grainID] = Guid.Parse(str);
                 }
                 grainInfoLock.Release();
@@ -177,7 +196,7 @@ namespace Concurrency.Implementation.GrainPlacement
                 {
                     if (initializationDone) Console.WriteLine($"GetSilo: read from redis");
                     var silo = grainPlacement_db.HashGet(Constants.GrainIDPrefix + grainID.ToString(), "SiloAddress").ToString();
-                    if (silo == null) throw new SnapperStorageException($"SiloAddress info of grain {grainID} is not in Redis {Constants.Redis_GrainPlacementMap}");
+                    if (string.IsNullOrEmpty(silo)) throw new SnapperStorageException($"SiloAddress info of grain {grainID} is not in Redis {Constants.Redis_GrainPlacementMap}");
                     grainIDToSilo[grainID] = silo;
                 }
                 grainInfoLock.Release();

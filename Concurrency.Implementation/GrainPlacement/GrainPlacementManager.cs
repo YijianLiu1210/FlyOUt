@@ -19,11 +19,11 @@ namespace Concurrency.Implementation.GrainPlacement
         readonly IGrainPlacementCache grainPlacementCache;
         bool hierarchicalCoord;
 
-        Dictionary<Guid, TaskCompletionSource> freezedGrains;                       // <grain ID, when the grain is unfreezed>
-        Dictionary<Guid, MyCounter> numToBeRegisteredTxnPerGrain;                   // <grain ID, number of transactions that will be registered but haven't got txn context>
-        Dictionary<Guid, TaskCompletionSource> allTxnRegisteredPerGrain;            // <grain ID, when all transactions have either got local tid or global tid>
-        Dictionary<Guid, long> maxUnCommittedLocalBidPerGrain;                      // <grain ID, max local tid>, only for local transactions
-        Dictionary<Guid, long> maxUnCommittedGlobalBidPerGrain;
+        Dictionary<GrainID, TaskCompletionSource> freezedGrains;                       // <grain ID, when the grain is unfreezed>
+        Dictionary<GrainID, MyCounter> numToBeRegisteredTxnPerGrain;                   // <grain ID, number of transactions that will be registered but haven't got txn context>
+        Dictionary<GrainID, TaskCompletionSource> allTxnRegisteredPerGrain;            // <grain ID, when all transactions have either got local tid or global tid>
+        Dictionary<GrainID, long> maxUnCommittedLocalBidPerGrain;                      // <grain ID, max local tid>, only for local transactions
+        Dictionary<GrainID, long> maxUnCommittedGlobalBidPerGrain;
 
         public GrainPlacementManager(IGrainPlacementCache grainPlacementCache)
         {
@@ -61,15 +61,15 @@ namespace Concurrency.Implementation.GrainPlacement
             var guid = this.GetPrimaryKey();
             myID = Helper.ConvertGuidToInt(guid);
 
-            freezedGrains = new Dictionary<Guid, TaskCompletionSource>();
-            numToBeRegisteredTxnPerGrain = new Dictionary<Guid, MyCounter>();
-            allTxnRegisteredPerGrain = new Dictionary<Guid, TaskCompletionSource>();
-            maxUnCommittedLocalBidPerGrain = new Dictionary<Guid, long>();
-            maxUnCommittedGlobalBidPerGrain = new Dictionary<Guid, long>();
+            freezedGrains = new Dictionary<GrainID, TaskCompletionSource>();
+            numToBeRegisteredTxnPerGrain = new Dictionary<GrainID, MyCounter>();
+            allTxnRegisteredPerGrain = new Dictionary<GrainID, TaskCompletionSource>();
+            maxUnCommittedLocalBidPerGrain = new Dictionary<GrainID, long>();
+            maxUnCommittedGlobalBidPerGrain = new Dictionary<GrainID, long>();
             return Task.CompletedTask;
         }
 
-        public async Task<Tuple<long, long>> FreezeGrain(Guid grainID)
+        public async Task<Tuple<long, long>> FreezeGrain(GrainID grainID)
         {
             //Console.WriteLine($"PM {myID}: try to freeze grain {grainID}");
             // add the grain, so no new transactions (that will access this grain) will be generated 
@@ -107,7 +107,7 @@ namespace Concurrency.Implementation.GrainPlacement
             return new Tuple<long, long>(localBid, globalBid);
         }
 
-        public Task UnFreezeGrain(Guid grainID)
+        public Task UnFreezeGrain(GrainID grainID)
         {
             if (freezedGrains.ContainsKey(grainID) == false) throw new Exception($"UnFreezeGrain: grainID {grainID} is not in freezedGrains");
             var task = freezedGrains[grainID];
@@ -116,16 +116,16 @@ namespace Concurrency.Implementation.GrainPlacement
             return Task.CompletedTask;
         }
 
-        HashSet<Guid> GetIntersectionWithFreezedGrains(HashSet<Guid> grainSet)
+        HashSet<GrainID> GetIntersectionWithFreezedGrains(HashSet<GrainID> grainSet)
         {
-            var grains = new HashSet<Guid>(freezedGrains.Keys);
+            var grains = new HashSet<GrainID>(freezedGrains.Keys);
             grains.IntersectWith(grainSet);
             return grains;
         }
 
-        async Task WaitForGrainUnfreeze(List<Guid> grainList)
+        async Task WaitForGrainUnfreeze(List<GrainID> grainList)
         {
-            var grainSet = new HashSet<Guid>(grainList);
+            var grainSet = new HashSet<GrainID>(grainList);
 
             var intersection = GetIntersectionWithFreezedGrains(grainSet);
             
@@ -149,7 +149,7 @@ namespace Concurrency.Implementation.GrainPlacement
             }
         }
 
-        void RegisterATransaction(Guid grain)
+        void RegisterATransaction(GrainID grain)
         {
             if (numToBeRegisteredTxnPerGrain.ContainsKey(grain) == false)
                 throw new Exception($"RegisterATransaction: grain {grain} is not in numToBeRegisteredTxnPerGrain");
@@ -168,21 +168,21 @@ namespace Concurrency.Implementation.GrainPlacement
         void CleanUp(long highestCommittedLocalBidOnGrain, long highestCommittedGlobalBidOnGrain)
         {
             // clean up local info
-            var itemsToRemove = new List<Guid>();
+            var itemsToRemove = new List<GrainID>();
             foreach (var item in maxUnCommittedLocalBidPerGrain)
                 if (item.Value <= highestCommittedLocalBidOnGrain) itemsToRemove.Add(item.Key);
 
             foreach (var grain in itemsToRemove) maxUnCommittedLocalBidPerGrain.Remove(grain);
 
             // clean up global info
-            itemsToRemove = new List<Guid>();
+            itemsToRemove = new List<GrainID>();
             foreach (var item in maxUnCommittedGlobalBidPerGrain)
                 if (item.Value <= highestCommittedGlobalBidOnGrain) itemsToRemove.Add(item.Key);
 
             foreach (var grain in itemsToRemove) maxUnCommittedGlobalBidPerGrain.Remove(grain);
         }
 
-        public async Task<Tuple<TransactionContext, long, long>> NewTransaction(List<Guid> grainList)
+        public async Task<Tuple<MyTransactionContext, long, long>> NewTransaction(List<GrainID> grainList)
         {
             await WaitForGrainUnfreeze(grainList);
 
@@ -194,7 +194,7 @@ namespace Concurrency.Implementation.GrainPlacement
                 for (int i = 0; i < grainList.Count; i++)
                 {
                     var grainID = grainList[i];
-                    var siloAddress = grainPlacementCache.GetSilo(grainID);
+                    var siloAddress = grainPlacementCache.GetSilo(grainID.id);
                     if (grainListPerSilo.ContainsKey(siloAddress) == false)
                     {
                         siloList.Add(siloAddress);
@@ -241,8 +241,8 @@ namespace Concurrency.Implementation.GrainPlacement
                     
                     var localInfo = await task;
                     CleanUp(localInfo.Item3, localInfo.Item4);
-                    var cxt = new TransactionContext(localInfo.Item1, localInfo.Item2, globalBid, globalTid);
-                    return new Tuple<TransactionContext, long, long>(cxt, localInfo.Item5, localInfo.Item6);
+                    var cxt = new MyTransactionContext(localInfo.Item1, localInfo.Item2, globalBid, globalTid);
+                    return new Tuple<MyTransactionContext, long, long>(cxt, localInfo.Item5, localInfo.Item6);
                 }
             }
             
@@ -261,8 +261,8 @@ namespace Concurrency.Implementation.GrainPlacement
             }
 
             CleanUp(info.Item3, info.Item4);
-            var cxt1 = new TransactionContext(info.Item1, info.Item2);
-            return new Tuple<TransactionContext, long, long>(cxt1, info.Item5, info.Item6);
+            var cxt1 = new MyTransactionContext(info.Item1, info.Item2);
+            return new Tuple<MyTransactionContext, long, long>(cxt1, info.Item5, info.Item6);
         }
     }
 }

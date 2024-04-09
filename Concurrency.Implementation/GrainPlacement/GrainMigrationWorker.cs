@@ -16,7 +16,7 @@ namespace Concurrency.Implementation.GrainPlacement
     public class GrainMigrationWorker : Grain, IGrainMigrationWorker
     {
         Guid myID;
-        HashSet<Guid> grainToMigrate;
+        HashSet<GrainID> grainToMigrate;
         readonly IDatabase grainPlacement_db;
         readonly IGrainPlacementCache grainPlacementCache;
 
@@ -36,14 +36,14 @@ namespace Concurrency.Implementation.GrainPlacement
         {
             myID = this.GetPrimaryKey();
 
-            grainToMigrate = new HashSet<Guid>();
+            grainToMigrate = new HashSet<GrainID>();
             return Task.CompletedTask;
         }
 
-        public async Task<GrainMigrationRequestResult> MigrateGrain(Guid grainID, string targetSilo)
+        public async Task<GrainMigrationRequestResult> MigrateGrain(GrainID grainID, string targetSilo)
         {
             // check if this MigrationWorker is the correct one to handle this request
-            var mw = grainPlacementCache.GetMigrationWorker(grainID);
+            var mw = grainPlacementCache.GetMigrationWorker(grainID.id);
             if (mw == myID) return await DoMigration(grainID, targetSilo);
             else
             {
@@ -52,20 +52,20 @@ namespace Concurrency.Implementation.GrainPlacement
             }
         }
 
-        public async Task<GrainMigrationRequestResult> DoMigration(Guid grainID, string targetSilo)
+        public async Task<GrainMigrationRequestResult> DoMigration(GrainID grainID, string targetSilo)
         {
             var start = DateTime.Now;
             // can only allow one migration request be handled for each actor
             if (grainToMigrate.Contains(grainID)) 
-                throw new SnapperGrainMigrationException($"Grain {Helper.ConvertGuidToInt(grainID)} is under migration, try again later. ");
-            var old_silo = grainPlacementCache.GetSilo(grainID);
-            if (old_silo == targetSilo) throw new SnapperGrainMigrationException($"Grain {Helper.ConvertGuidToInt(grainID)} is already in the target silo {targetSilo}. ");
+                throw new SnapperGrainMigrationException($"Grain {Helper.ConvertGuidToInt(grainID.id)} is under migration, try again later. ");
+            var old_silo = grainPlacementCache.GetSilo(grainID.id);
+            if (old_silo == targetSilo) throw new SnapperGrainMigrationException($"Grain {Helper.ConvertGuidToInt(grainID.id)} is already in the target silo {targetSilo}. ");
             grainToMigrate.Add(grainID);
             
             var res = new GrainMigrationRequestResult();
 
             // tell the actor to stop receiving new transaction requests
-            var grain = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID, Constants.grainClassName);
+            var grain = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID.id, grainID.className);
             await grain.StartMigration();
             res.informGrainTime = (DateTime.Now - start).TotalMilliseconds;
 
@@ -106,7 +106,7 @@ namespace Concurrency.Implementation.GrainPlacement
 
             start = DateTime.Now;
             var globalConfigGrain = GrainFactory.GetGrain<IGlobalConfigGrain>("GlobalConfigGrain");
-            await globalConfigGrain.UpdateUserGrainInfoInCache(grainID, targetSilo);
+            await globalConfigGrain.UpdateUserGrainInfoInCache(grainID.id, targetSilo);
             res.updateCacheTime = (DateTime.Now - start).TotalMilliseconds;
 
             // de-activate the grain

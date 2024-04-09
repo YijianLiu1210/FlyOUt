@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Utilities
 {
     public enum AccessMode { Read, ReadWrite };
-    public enum BenchmarkType { SMALLBANK };
+    public enum BenchmarkType { SMALLBANK, TPCC };
     public enum ImplementationType { SNAPPER, NONTXN, ORLEANSTXN };
     public enum TxnType { Init, MultiTransfer, Deposit };
     public enum GrainType { UserGrain, LocalCoord, GlobalCoord, LocalConfig, GlobalConfig, MigrationWorker, PlacementManager }
@@ -15,7 +14,7 @@ namespace Utilities
 
     public class Constants
     {
-        public const bool isLocalTest = false;
+        public const bool isLocalTest = true;
         public const char grainMigrationExpID = '5';
 
         public const string ClusterID = "SnapperCluster";
@@ -56,13 +55,19 @@ namespace Utilities
         public const int numEpoch = 6;
         public const int numWarmupEpoch = 2;
         public const int epochDurationMSecs = 10000;
-        public const BenchmarkType benchmark = BenchmarkType.SMALLBANK;
+        public const BenchmarkType benchmark = BenchmarkType.TPCC;
         // for SmallBank
         public const int numGrainPerLocalSilo = 10000;
         public const string grainClassName = "SmallBank.Grains.SnapperTransactionalAccountGrain";
+        // for TPCC
+        public const int NUM_W_PER_SILO = 2;
+        public const int NUM_D_PER_W = 10;
+        public const int NUM_C_PER_D = 3000;
+        public const int NUM_I = 100000;
+        public const int NUM_StockGrain_PER_W = 10000;
 
-        public const string userName = isLocalTest ? "jhs316" : "Administrator";
-        public const string workDir = @$"C:\Users\{userName}\Desktop\MySnapper";
+        public const string userName = "yijia"; // isLocalTest ? "yijia" : "Administrator";
+        public const string workDir = @$"C:\Users\{userName}\Desktop\DistributedSnapper";
         public const string dataPath = workDir + @"\data\";
         public const string logPath = dataPath + @"log\";
         public const string resultPath = dataPath + "result.txt";
@@ -87,8 +92,8 @@ namespace Utilities
         public const string GrainStatePrefix = "GrainState-";
 
         public const int Redis_GrainPlacementMap = isLocalTest ? 2 : 0;   // grainID => siloID
-        public const string GrainIDPrefix = "GrainID-";
-        public const string CoordIDPrefix = "CoordID-";
+        public const string GrainIDPrefix = "GrainID+";
+        public const string CoordIDPrefix = "CoordID+";
 
         public const int Redis_SiloInfo = isLocalTest ? 3 : 0;
         public const string GeneralInfoPrefix = "General-";
@@ -96,6 +101,7 @@ namespace Utilities
 
         // for workload generation
         public const int BASE_NUM_MULTITRANSFER = 150000;
+        public const int BASE_NUM_NEWORDER = 20000;
 
         public const int maxNumReRun = 3;
         public const double sdSafeRange = 0.1;   // standard deviation should within the range of 5% * mean

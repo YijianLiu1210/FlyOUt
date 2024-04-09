@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
+using Utilities;
 
 namespace Concurrency.Interface.Logging
 {
@@ -10,18 +11,18 @@ namespace Concurrency.Interface.Logging
         bool IsLoggingEnabled();
         
         // for ACT
-        Task CoordPrepare(Guid coordID, long tid, HashSet<Guid> participateGrains);
-        Task Prepare(Guid grainID, long tid, Guid coordID, byte[] state, DateTime timestamp);
-        Task CoordCommit(Guid coordID, long tid);
-        Task Commit(Guid grainID, long tid);
+        Task CoordPrepare(GrainID coordID, long tid, HashSet<GrainID> participateGrains);
+        Task Prepare(GrainID grainID, long tid, GrainID coordID, byte[] state, DateTime timestamp);
+        Task CoordCommit(GrainID coordID, long tid);
+        Task Commit(GrainID grainID, long tid);
 
         // for PACT batch
         Task GlobalBatchInfo(Guid globalCoordID, long globalBid, HashSet<Guid> participateLocalCoords);
-        Task LocalBatchInfo(Guid localCoordID, long localBid, long globalBid, Guid globalCoordID, HashSet<Guid> participateGrains);
-        Task LocalBatchComplete(Guid grainID, long localBid, Guid localCoordID, byte[] state, DateTime timestamp);
+        Task LocalBatchInfo(Guid localCoordID, long localBid, long globalBid, Guid globalCoordID, HashSet<GrainID> participateGrains);
+        Task LocalBatchComplete(GrainID grainID, long localBid, Guid localCoordID, byte[] state, DateTime timestamp);
         Task LocalBatchCommit(Guid localCoordID, long localBid);
 
         // for grain migration
-        Task<byte[]> GetLastCommittedGrainStateFromLog(Guid grainID, long lastCommittedLocalBid);
+        Task<byte[]> GetLastCommittedGrainStateFromLog(GrainID grainID, long lastCommittedLocalBid);
     }
 }

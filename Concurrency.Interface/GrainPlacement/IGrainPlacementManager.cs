@@ -9,12 +9,12 @@ namespace Concurrency.Interface.GrainPlacement
     public interface IGrainPlacementManager : IGrainWithGuidKey
     {
         Task Init(int numLocalSilo);
-        Task<Tuple<TransactionContext, long, long>> NewTransaction(List<Guid> grainList);  // <cxt, highestCommittedGlobalBid, highestCommittedLocalBid>
+        Task<Tuple<MyTransactionContext, long, long>> NewTransaction(List<GrainID> grainList);  // <cxt, highestCommittedGlobalBid, highestCommittedLocalBid>
 
         Task CheckGC();
 
-        Task<Tuple<long, long>> FreezeGrain(Guid grainID);
+        Task<Tuple<long, long>> FreezeGrain(GrainID grainID);
 
-        Task UnFreezeGrain(Guid grainID);
+        Task UnFreezeGrain(GrainID grainID);
     }
 }

@@ -8,15 +8,16 @@ using Orleans;
 using MessagePack;
 using System.Diagnostics;
 using Concurrency.Interface.GrainPlacement;
+using System.Linq;
 
 namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
 {
     // cannot support hybrid commit for Timestamp-based concurrency control
     public class NonDetCommitter<TState> where TState : ICloneable, IPrintable
     {
-        readonly Guid myID;
+        readonly GrainID myID;
         readonly IGrainPlacementCache grainPlacementInfo;
-        readonly Dictionary<long, Guid> coordinatorMap;         // <global ACT tid, the grain ID who starts the ACT>
+        readonly Dictionary<long, GrainID> coordinatorMap;         // <global ACT tid, the grain ID who starts the ACT>
         readonly ILoggingProtocol log;
         readonly IGrainFactory myGrainFactory;
         readonly ITransactionalState<TState> state;
@@ -24,8 +25,8 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
         readonly Dictionary<DateTime, byte[]> lastPreparedState;
 
         public NonDetCommitter(
-            Guid myID,
-            Dictionary<long, Guid> coordinatorMap,
+            GrainID myID,
+            Dictionary<long, GrainID> coordinatorMap,
             ITransactionalState<TState> state, 
             ILoggingProtocol log,
             IGrainPlacementCache grainPlacementInfo,
@@ -81,9 +82,9 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
             return new Tuple<bool, bool>(false, false);
         }
 
-        public async Task<bool> CoordPrepare(long tid, Dictionary<Guid, OpOnGrain> grainOpInfo)
+        public async Task<bool> CoordPrepare(long tid, Dictionary<GrainID, OpOnGrain> grainOpInfo)
         {
-            if (log.IsLoggingEnabled()) await log.CoordPrepare(myID, tid, new HashSet<Guid>(grainOpInfo.Keys));
+            if (log.IsLoggingEnabled()) await log.CoordPrepare(myID, tid, grainOpInfo.Keys.ToHashSet());
 
             var prepareTask = new List<Task<bool>>();
             foreach (var item in grainOpInfo)
@@ -91,7 +92,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
                 if (item.Value.isNoOp) continue;  
                 // reader grain needs to Prepare, because it should release the read lock
                 // writer grain needs to Prepare, because it must persist the grain state
-                var grain = myGrainFactory.GetGrain<ITransactionExecutionGrain>(item.Key, Constants.grainClassName);
+                var grain = myGrainFactory.GetGrain<ITransactionExecutionGrain>(item.Key.id, item.Key.className);
                 var t = grain.Prepare(tid, item.Value.isReadonly);
                 prepareTask.Add(t);
             }
@@ -118,8 +119,8 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
                 if (item.Value.isNoOp || item.Value.isReadonly) continue;
 
                 // writer grain needs 2nd phase, because it can only release the write lock in the 2nd phase
-                var grain = myGrainFactory.GetGrain<ITransactionExecutionGrain>(item.Key, Constants.grainClassName);
-                var siloAddress = grainPlacementInfo.GetSilo(item.Key);
+                var grain = myGrainFactory.GetGrain<ITransactionExecutionGrain>(item.Key.id, item.Key.className);
+                var siloAddress = grainPlacementInfo.GetSilo(item.Key.id);
                 if (funcResult.scheduleInfoPerSilo.ContainsKey(siloAddress) == false)
                     throw new Exception($"CoordCommit: funcResult does not contain silo address {siloAddress}");
                 tasks.Add(grain.Commit(tid, funcResult.scheduleInfoPerSilo[siloAddress].maxBeforeBid, funcResult.globalScheduleInfo.maxBeforeBid));
@@ -128,7 +129,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
         }
 
         // the ACT aborted due to RW conflicts will come to Abort phase directly (without Prepare phase)
-        public async Task CoordAbort(long tid, Dictionary<Guid, OpOnGrain> grainOpInfo, bool isPrepared)
+        public async Task CoordAbort(long tid, Dictionary<GrainID, OpOnGrain> grainOpInfo, bool isPrepared)
         {
             var tasks = new List<Task>();
             // Presume Abort: we do not write abort logs, when recovering, if no log record is found, we assume the transaction was aborted
@@ -139,7 +140,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
                 if (isPrepared && item.Value.isReadonly) continue;
                 // reader grain which has not been prepared needs to do Abort, because it needs to do garbage collection
                 // writer grain needs 2nd phase, because it can only release the write lock in the 2nd phase
-                var grain = myGrainFactory.GetGrain<ITransactionExecutionGrain>(item.Key, Constants.grainClassName);
+                var grain = myGrainFactory.GetGrain<ITransactionExecutionGrain>(item.Key.id, item.Key.className);
                 tasks.Add(grain.Abort(tid));
             }
             await Task.WhenAll(tasks);
@@ -152,7 +153,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
             {
                 var timestamp = DateTime.Now;
                 var s = state.GetPreparedState(tid);
-                Debug.Assert(s.PrintState() == myID.ToString());
+                //Debug.Assert(s.PrintState() == myID.id.ToString());
                 var data = MessagePackSerializer.Serialize(s);
                 lastPreparedState.Clear();
                 lastPreparedState.Add(timestamp, data);

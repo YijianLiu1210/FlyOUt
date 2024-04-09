@@ -241,15 +241,15 @@ namespace Concurrency.Implementation.Coordinator
             }
 
             var curScheduleMap = bidToSubBatches[bid];
-            var participateGrains = new HashSet<Guid>();
-            foreach (var item in curScheduleMap) participateGrains.Add(Guid.Parse(item.Key));
+            var participateGrains = new HashSet<GrainID>();
+            foreach (var item in curScheduleMap) participateGrains.Add(GrainID.GetID(item.Key));
             if (log.IsLoggingEnabled()) await log.LocalBatchInfo(myID, bid, globalBid, globalCoordID, participateGrains);
 
             var tasks = new List<Task>();
             foreach (var item in curScheduleMap)
             {
-                var grainID = Guid.Parse(item.Key);
-                var dest = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID, Constants.grainClassName);
+                var grainID = GrainID.GetID(item.Key);
+                var dest = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID.id, grainID.className);
                 var batch = item.Value;
 
                 var localSubBatch = new LocalSubBatch(globalBid, batch);
@@ -324,8 +324,8 @@ namespace Concurrency.Implementation.Coordinator
             var curScheduleMap = bidToSubBatches[bid];
             foreach (var item in curScheduleMap)
             {
-                var grainID = Guid.Parse(item.Key);
-                var dest = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID, Constants.grainClassName);
+                var grainID = GrainID.GetID(item.Key);
+                var dest = GrainFactory.GetGrain<ITransactionExecutionGrain>(grainID.id, grainID.className);
                 tasks.Add(dest.AckBatchCommit(bid, globalBid));
             }
             await Task.WhenAll(tasks);

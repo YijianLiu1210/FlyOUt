@@ -108,7 +108,7 @@ namespace Concurrency.Implementation.Logging
             waitFlush = new TaskCompletionSource();
         }
 
-        public async Task<Tuple<DateTime, byte[]>> ReadGrainState(Guid grainID, long lastCommittedLocalBid)
+        public async Task<Tuple<DateTime, byte[]>> ReadGrainState(GrainID grainID, long lastCommittedLocalBid)
         {
             Debug.Assert(fileName.Contains($"{LogContentType.LocalBatchComplete}"));
             await fileLock.WaitAsync();
@@ -122,7 +122,7 @@ namespace Concurrency.Implementation.Logging
                 var log = MessagePackSerializer.Deserialize<LogFormat>(logBytes);
                 Debug.Assert(log.logType == LogContentType.LocalBatchComplete);
                 var logContent = MessagePackSerializer.Deserialize<LocalBatchCompleteLog>(log.logContent);
-                if (logContent.grainID == grainID && logContent.localBid == lastCommittedLocalBid)
+                if (logContent.grainID.Equals(grainID) && logContent.localBid == lastCommittedLocalBid)
                 {
                     timestamp = logContent.timestamp;
                     state = logContent.state;
@@ -136,7 +136,7 @@ namespace Concurrency.Implementation.Logging
             return new Tuple<DateTime, byte[]>(timestamp , state);
         }
 
-        public async Task<Tuple<DateTime, byte[]>> ReadGrainState(Guid grainID)
+        public async Task<Tuple<DateTime, byte[]>> ReadGrainState(GrainID grainID)
         {
             Debug.Assert(fileName.Contains($"{LogContentType.Prepare}"));
             await fileLock.WaitAsync();
@@ -150,7 +150,7 @@ namespace Concurrency.Implementation.Logging
                 var log = MessagePackSerializer.Deserialize<LogFormat>(logBytes);
                 Debug.Assert(log.logType == LogContentType.Prepare);
                 var logContent = MessagePackSerializer.Deserialize<PrepareLog>(log.logContent);
-                if (logContent.grainID == grainID)
+                if (logContent.grainID.Equals(grainID))
                 {
                     if (logContent.timestamp > timestamp)     // find the record that has the max timestamp
                     {

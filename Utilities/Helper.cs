@@ -9,6 +9,14 @@ namespace Utilities
 {
     public static class Helper
     {
+        public static int NURand(int A, int x, int y, int C)
+        {
+            var rnd = new Random();
+            var part1 = rnd.Next(0, A + 1);
+            var part2 = rnd.Next(x, y + 1);
+            return (((part1 | part2) + C) % (y - x + 1)) + x;
+        }
+
         public static int GetNumCPUForGlobalSilo(int numLocalSilo)
         {
             return numLocalSilo;

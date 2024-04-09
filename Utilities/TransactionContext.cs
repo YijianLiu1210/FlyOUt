@@ -3,7 +3,7 @@
 namespace Utilities
 {
     [Serializable]
-    public class TransactionContext
+    public class MyTransactionContext
     {
         // only for PACT
         public long localBid;
@@ -14,30 +14,30 @@ namespace Utilities
         public readonly long globalTid;
 
         // only for ACT: the grain who starts the ACT
-        public readonly Guid nonDetCoordID;
+        public readonly GrainID nonDetCoordID;
 
         /// <summary> This constructor is only for local PACT </summary>
-        public TransactionContext(long localBid, long localTid)
+        public MyTransactionContext(long localBid, long localTid)
         {
             this.localBid = localBid;
             this.localTid = localTid;
             globalBid = -1;
             globalTid = -1;
-            nonDetCoordID = Guid.Empty;
+            nonDetCoordID = new GrainID(Guid.Empty, "");
         }
 
         /// <summary> This constructor is only for global PACT </summary>
-        public TransactionContext(long localBid, long localTid, long globalBid, long globalTid)
+        public MyTransactionContext(long localBid, long localTid, long globalBid, long globalTid)
         {
             this.localBid = localBid;
             this.localTid = localTid;
             this.globalBid = globalBid;
             this.globalTid = globalTid;
-            nonDetCoordID = Guid.Empty;
+            nonDetCoordID = new GrainID(Guid.Empty, "");
         }
 
         /// <summary> This constructor is only for ACT </summary>
-        public TransactionContext(long globalTid, Guid nonDetCoordID)
+        public MyTransactionContext(long globalTid, GrainID nonDetCoordID)
         {
             localBid = -1;
             localTid = -1;

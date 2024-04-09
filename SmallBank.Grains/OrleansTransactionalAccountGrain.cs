@@ -13,7 +13,7 @@ namespace SmallBank.Grains
 
     [Reentrant]
     [SnapperGrainPlacementStrategy(GrainType.UserGrain)]
-    class OrleansTransactionalAccountGrain : Orleans.Grain, IOrleansTransactionalAccountGrain
+    public class OrleansTransactionalAccountGrain : Orleans.Grain, IOrleansTransactionalAccountGrain
     {
         readonly ITransactionalState<BankAccount> state;
 
