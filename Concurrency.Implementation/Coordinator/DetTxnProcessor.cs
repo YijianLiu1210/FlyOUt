@@ -179,6 +179,7 @@ namespace Concurrency.Implementation.Coordinator
         public async Task WaitPrevBatchToCommit(long bid)
         {
             var lastBid = bidToLastBid[bid];
+            
             bidToLastBid.Remove(bid);
             if (highestCommittedBid < lastBid)
             {

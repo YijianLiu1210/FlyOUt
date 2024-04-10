@@ -109,10 +109,17 @@ namespace TPCC.Grains
                 var input = (OrderInfo)funcInput;
                 var O_ID = input.order.O_ID;
                 var myState = await GetState(context, AccessMode.ReadWrite);
+                
                 Debug.Assert(myState.neworder.Contains(O_ID) == false);
 
                 // only do it for local test
                 if (Constants.isLocalTest)
+                {
+                    myState.neworder.Clear();
+                    myState.orderline_table.Clear();
+                    myState.orderline_table.Clear();
+                }
+                else 
                 {
                     myState.neworder.Clear();
                     myState.orderline_table.Clear();
@@ -130,6 +137,7 @@ namespace TPCC.Grains
             catch (Exception)
             {
                 res.exception = true;
+                if (context.localBid != -1) await GetState(context, AccessMode.ReadWrite);
             }
             return res;
         }

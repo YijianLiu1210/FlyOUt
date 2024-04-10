@@ -277,7 +277,7 @@ namespace Concurrency.Implementation.Coordinator
             long globalBid = -1;
             var isPrevGlobal = false;
             var isGlobal = localBidToGlobalBid.ContainsKey(bid);
-
+            
             if (optimizeCommit)
             {
                 if (isGlobal)
@@ -319,7 +319,7 @@ namespace Concurrency.Implementation.Coordinator
             
             if (log.IsLoggingEnabled()) await log.LocalBatchCommit(myID, bid);
             detTxnProcessor.AckBatchCommit(bid);
-
+            
             var tasks = new List<Task>();
             var curScheduleMap = bidToSubBatches[bid];
             foreach (var item in curScheduleMap)

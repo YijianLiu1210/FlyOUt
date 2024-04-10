@@ -68,6 +68,7 @@ namespace TPCC.Grains
             try
             {
                 var myState = await GetState(context, AccessMode.Read);
+                //Console.WriteLine($"RO grain: {this.myID.className} || {Helper.ConvertGuidToInt(this.myID.id)}");
                 res.resultObj = myState.warehouse.W_TAX;
             }
             catch (Exception)

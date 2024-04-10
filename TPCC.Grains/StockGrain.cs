@@ -103,6 +103,7 @@ namespace TPCC.Grains
                 var items = input.itemsToBuy;
                 if (items.Count == 0) throw new Exception("Exception: no items to buy");
                 var myState = await GetState(context, AccessMode.ReadWrite);
+                
                 if (remoteFlag == 1) Debug.Assert(W_ID != myState.W_ID);
                 else Debug.Assert(W_ID == myState.W_ID);
                 foreach (var item in items)
@@ -128,6 +129,7 @@ namespace TPCC.Grains
             catch (Exception)
             {
                 ret.exception = true;
+                if (context.localBid != -1) await GetState(context, AccessMode.ReadWrite);
             }
             return ret;
         }

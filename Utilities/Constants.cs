@@ -66,7 +66,7 @@ namespace Utilities
         public const int NUM_I = 100000;
         public const int NUM_StockGrain_PER_W = 10000;
 
-        public const string userName = "jhs316"; // isLocalTest ? "yijia" : "Administrator";
+        public const string userName = isLocalTest ? "yijia" : "Administrator";
         public const string workDir = @$"C:\Users\{userName}\Desktop\DistributedSnapper";
         public const string dataPath = workDir + @"\data\";
         public const string logPath = dataPath + @"log\";

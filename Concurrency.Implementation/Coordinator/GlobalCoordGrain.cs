@@ -144,7 +144,7 @@ namespace Concurrency.Implementation.Coordinator
             // count down the number of expected ACKs from different silos
             expectedAcksPerBatch[bid]--;
             if (expectedAcksPerBatch[bid] != 0) return;
-
+            
             await detTxnProcessor.WaitPrevBatchToCommit(bid);
             detTxnProcessor.AckBatchCommit(bid);
 
@@ -159,7 +159,7 @@ namespace Concurrency.Implementation.Coordinator
                 tasks.Add(dest.AckGlobalBatchCommit(bid));
             }
             await Task.WhenAll(tasks);
-
+            
             // garbage collection
             bidToSubBatches.Remove(bid);
             coordPerBatchPerSilo.Remove(bid);

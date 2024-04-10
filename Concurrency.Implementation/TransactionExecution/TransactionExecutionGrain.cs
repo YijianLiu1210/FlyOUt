@@ -24,7 +24,7 @@ namespace Concurrency.Implementation.TransactionExecution
     public abstract class TransactionExecutionGrain<TState> : Grain, ITransactionExecutionGrain where TState : ICloneable, IPrintable, new()
     {
         // grain basic info
-        GrainID myID;
+        public GrainID myID;
         readonly IGrainPlacementCache grainPlacementCache;
         readonly IDatabase grainPlacement_db;
         bool hierarchicalCoord;
@@ -176,7 +176,7 @@ namespace Concurrency.Implementation.TransactionExecution
             if (data != null)
             {
                 var myState = MessagePackSerializer.Deserialize<TState>(data);
-                if (myState.PrintState() != myID.ToString()) throw new Exception($"ActivateGrain: myState {myState.PrintState()} is not myID {myID}");
+                if (Constants.benchmark == BenchmarkType.SMALLBANK && myState.PrintState() != myID.ToString()) throw new Exception($"ActivateGrain: myState {myState.PrintState()} is not myID {myID}");
                 state.SetState(myState);
 
                 // in case this grain is de-activated again before executing any PACT on this new silo
@@ -244,7 +244,7 @@ namespace Concurrency.Implementation.TransactionExecution
             start = DateTime.Now;
             if (res == null) throw new Exception($"PrepareDeactivation: last committed state is null");
             var s = MessagePackSerializer.Deserialize<TState>(res);
-            if (s.PrintState() != myID.ToString()) throw new Exception($"PrepareDeactivation: state {s.PrintState()} is not myID {myID}");
+            if (Constants.benchmark == BenchmarkType.SMALLBANK && s.PrintState() != myID.ToString()) throw new Exception($"PrepareDeactivation: state {s.PrintState()} is not myID {myID}");
 
             var deserializeStateTime = (DateTime.Now - start).TotalMilliseconds;
             return new Tuple<double, double, double, byte[]>(waitTxnCommitTime, getCommittedStateTime, deserializeStateTime, res);
@@ -274,7 +274,7 @@ namespace Concurrency.Implementation.TransactionExecution
             var finishExeTime = DateTime.Now;
             var startExeTime = res.Item2;
             var resultObj = res.Item1;
-
+            
             // wait for this batch to commit
             if (commitInfo.highestCommittedLocalBidPerSilo[RuntimeIdentity] < cxt.localBid) await batchCommit[cxt.localBid].Task;
             var commitTime = DateTime.Now;

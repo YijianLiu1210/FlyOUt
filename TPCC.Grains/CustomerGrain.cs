@@ -7,6 +7,7 @@ using Concurrency.Interface.GrainPlacement;
 using Concurrency.Interface.Logging;
 using StackExchange.Redis;
 using MessagePack;
+using Orleans;
 
 namespace TPCC.Grains
 {
@@ -101,9 +102,9 @@ namespace TPCC.Grains
                 var C_ID = txn_input.C_ID;
                 var ItemsToBuy = txn_input.ItemsToBuy;
                 var myState = await GetState(context, AccessMode.Read);
-
+                
                 // STEP 1: get item prices from ItemGrain
-                Dictionary<int, float> itemPrices;
+                var itemPrices = new Dictionary<int, float>();
                 {
                     var itemIDs = new List<int>();
                     foreach (var item in ItemsToBuy) itemIDs.Add(item.Key);
@@ -115,9 +116,17 @@ namespace TPCC.Grains
                     {
                         if (context.localBid == -1) throw new Exception("Exception thrown from ItemGrain. ");
                         abort = true;
-                        itemPrices = new Dictionary<int, float>();
                     }
-                    else itemPrices = (Dictionary<int, float>)r.resultObj;
+                    else
+                    {
+                        if (r.resultObj != null) itemPrices = (Dictionary<int, float>)r.resultObj;
+
+                        if (itemPrices.Count != ItemsToBuy.Count)
+                        {
+                            if (context.localBid == -1) throw new Exception("Exception thrown from ItemGrain. ");
+                            abort = true;
+                        }
+                    }
                 }
 
                 // STEP 2: get tax info from WarehouseGrain and DistrictGrain
@@ -181,7 +190,7 @@ namespace TPCC.Grains
                     {
                         var func_input = new UpdateStockInput(myState.W_ID, myState.D_ID, isRemote[grain.Key], grain.Value);
                         var func_call = new FunctionCall("UpdateStock", func_input, typeof(StockGrain));
-                        //Console.WriteLine($"StockGrain {grain.Key}");
+                        //Console.WriteLine($"call stock grain {grain.Key}");
                         tasks.Add(CallGrain(context, Helper.ConvertIntToGuid(grain.Key), "TPCC.Grains.StockGrain", func_call));
                     }
                     await Task.WhenAll(tasks);
@@ -194,9 +203,9 @@ namespace TPCC.Grains
                         }
                         else
                         {
-                            abort = true;
                             if (context.localBid == -1) throw new Exception("Exception thrown from StockGrain. ");
-                        } 
+                            abort = true;
+                        }
                     }
                 }
 
@@ -208,8 +217,8 @@ namespace TPCC.Grains
                     {
                         Debug.Assert(context.localBid != -1);
                         var func_call = new FunctionCall("AddNewOrder", null, typeof(OrderGrain));
-                        //Console.WriteLine($"OrderGrain {orderGrainID}");
-                        _ = CallGrain(context, Helper.ConvertIntToGuid(orderGrainID), "TPCC.Grains.OrderGrain", func_call);
+                        //Console.WriteLine($"call order grain {orderGrainID}, with abort");
+                        await CallGrain(context, Helper.ConvertIntToGuid(orderGrainID), "TPCC.Grains.OrderGrain", func_call);
                     }
                     else
                     {
@@ -220,6 +229,8 @@ namespace TPCC.Grains
                         foreach (var item in ItemsToBuy)
                         {
                             var I_ID = item.Key;
+                            if (I_ID == -1) continue;
+
                             var D_INFO = items_dist_info[I_ID];
                             var I_PRICE = itemPrices[I_ID];
                             var QUANTITY = ItemsToBuy[I_ID].Item2;
@@ -232,6 +243,7 @@ namespace TPCC.Grains
                         }
                         var order_info = new OrderInfo(order, orderlines);
                         var func_call = new FunctionCall("AddNewOrder", order_info, typeof(OrderGrain));
+                        //Console.WriteLine($"call order grain {orderGrainID}");
                         var t = CallGrain(context, Helper.ConvertIntToGuid(orderGrainID), "TPCC.Grains.OrderGrain", func_call);
                         if (context.localBid == -1) await t;
 
@@ -241,8 +253,9 @@ namespace TPCC.Grains
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Debug.Assert(context.localBid == -1);
                 res.exception = true;
             }
             return res;

@@ -25,9 +25,9 @@ using System.Diagnostics;
 // STEP 5: in the code, all instances are launched by using the created template
 //         (1) need to specify the instance type (large or xlarge) in the code
 
-var numLocalSilo = int.Parse(args[0]);
+//var numLocalSilo = int.Parse(args[0]);
 //var reInvokeAllResources = bool.Parse(args[1]);
-//var numLocalSilo = 16;
+var numLocalSilo = 2;
 var reInvokeAllResources = false;
 
 // ========================================================================================================

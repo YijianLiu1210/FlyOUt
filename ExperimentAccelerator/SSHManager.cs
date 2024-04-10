@@ -89,7 +89,7 @@ namespace ExperimentAccelerator
                 }
                 catch (Exception e)
                 {
-                    //Console.WriteLine($"{e.Message} {e.StackTrace}");
+                    Console.WriteLine($"{e.Message} {e.StackTrace}");
                     Console.WriteLine("Fail to connect, wait for 5s, and try again...");
                     Thread.Sleep(TimeSpan.FromSeconds(5));   // try it again after 5s
                 }

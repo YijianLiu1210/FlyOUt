@@ -153,7 +153,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
             {
                 var timestamp = DateTime.Now;
                 var s = state.GetPreparedState(tid);
-                //Debug.Assert(s.PrintState() == myID.id.ToString());
+                if (Constants.benchmark == BenchmarkType.SMALLBANK) Debug.Assert(s.PrintState() == myID.id.ToString());
                 var data = MessagePackSerializer.Serialize(s);
                 lastPreparedState.Clear();
                 lastPreparedState.Add(timestamp, data);

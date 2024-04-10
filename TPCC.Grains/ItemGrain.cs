@@ -72,6 +72,7 @@ namespace TPCC.Grains
                 var item_ids = (List<int>)funcInput;
                 var item_prices = new Dictionary<int, float>();  // <I_ID, price>
                 var myState = await GetState(context, AccessMode.Read);
+                
                 foreach (var id in item_ids)
                 {
                     if (myState.items.ContainsKey(id)) item_prices.Add(id, myState.items[id].I_PRICE);

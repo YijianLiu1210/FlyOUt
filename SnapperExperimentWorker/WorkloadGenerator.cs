@@ -392,6 +392,7 @@ namespace SnapperExperimentWorker
 
                             if (I_ID != -1)
                             {
+                                Debug.Assert(I_ID < Constants.NUM_I);
                                 var grainID = TPCCManager.GetStockGrain(supply_wh, I_ID);
                                 if (!grains.ContainsKey(grainID)) grains.Add(grainID, stockGrainName);
 

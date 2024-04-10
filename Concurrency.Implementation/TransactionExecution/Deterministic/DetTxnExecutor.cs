@@ -117,7 +117,7 @@ namespace Concurrency.Implementation.TransactionExecution
 
                 var timestamp = DateTime.Now;
                 var s = state.GetCommittedState();
-                Debug.Assert(s.PrintState() == myID.ToString());
+                if (Constants.benchmark == BenchmarkType.SMALLBANK) Debug.Assert(s.PrintState() == myID.ToString());
                 var data = MessagePackSerializer.Serialize(s);
                 Debug.Assert(statePerBatch.ContainsKey(cxt.localBid) == false);
                 statePerBatch[cxt.localBid] = new Tuple<DateTime, byte[]>(timestamp, data);
@@ -127,7 +127,7 @@ namespace Concurrency.Implementation.TransactionExecution
 
                 var coord = myGrainFactory.GetGrain<ILocalCoordGrain>(coordID);
                 _ = coord.AckBatchCompletion(cxt.localBid);
-
+               
                 localBtchInfoPromise.Remove(cxt.localBid);
                 if (cxt.globalBid != -1)
                 {
@@ -171,7 +171,7 @@ namespace Concurrency.Implementation.TransactionExecution
                 detFuncResults[tid].isReadOnlyOnGrain = false;
             }
             var res = state.GetCommittedState();
-            Debug.Assert(res.PrintState() == myID.ToString());
+            if (Constants.benchmark == BenchmarkType.SMALLBANK) Debug.Assert(res.PrintState() == myID.ToString());
             return res;
         }
 
