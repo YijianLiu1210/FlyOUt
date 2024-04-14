@@ -1,14 +1,14 @@
 ﻿using Orleans;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Utilities;
 
 namespace Concurrency.Interface.Configuration
 {
     public interface ILocalConfigGrain : IGrainWithGuidKey
     {
         // configuration
-        Task Init(bool hierarchicalCoord);
+        Task Init(bool hierarchicalCoord, Dictionary<string, string> tpccGrainNames);
         Task ConfigLogging(bool isLoggingEnabled, int siloID, int numLocalSilo);
         Task ConfigLocalCoordinator(int siloID, bool optimizeCommit);
         Task ConfigPlacementManager(int numLocalSilo, int siloID);

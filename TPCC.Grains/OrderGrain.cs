@@ -137,7 +137,6 @@ namespace TPCC.Grains
             catch (Exception)
             {
                 res.exception = true;
-                if (context.localBid != -1) await GetState(context, AccessMode.ReadWrite);
             }
             return res;
         }

@@ -36,6 +36,17 @@ namespace Concurrency.Implementation.TransactionExecution
         Dictionary<long, Dictionary<long, long>> globalTidToLocalTidPerBatch;  // key: global bid, <global tid, local tid>
         Dictionary<long, TaskCompletionSource> globalBtchInfoPromise;          // key: global bid, use to check if the SubBatch has arrived or not
 
+        // for TPCC only
+        bool readOnly;
+        bool startLogging;
+
+        public void StartLogging() => startLogging = true;
+
+        public void StopLogging()
+        {
+            if (Constants.benchmark == BenchmarkType.TPCC) startLogging = false;
+        }
+
         public void CheckGC()
         {
             if (localBtchInfoPromise.Count != 0) Console.WriteLine($"DetTxnExecutor: localBtchInfoPromise.Count = {localBtchInfoPromise.Count}");
@@ -71,6 +82,16 @@ namespace Concurrency.Implementation.TransactionExecution
             globalBidToLocalBid = new Dictionary<long, long>();
             globalTidToLocalTidPerBatch = new Dictionary<long, Dictionary<long, long>>();
             globalBtchInfoPromise = new Dictionary<long, TaskCompletionSource>();
+
+            // for TPCC only
+            readOnly = false;
+            startLogging = true;
+
+            if (Constants.benchmark == BenchmarkType.TPCC)
+            {
+                if (myID.className.Contains("ItemGrain") || myID.className.Contains("WarehouseGrain") || myID.className.Contains("CustomerGrain")) readOnly = true;
+                startLogging = false;
+            }
         }
 
         public async Task<MyTransactionContext> GetDetContext(List<GrainID>  grainAccessInfo)
@@ -118,11 +139,16 @@ namespace Concurrency.Implementation.TransactionExecution
                 var timestamp = DateTime.Now;
                 var s = state.GetCommittedState();
                 if (Constants.benchmark == BenchmarkType.SMALLBANK) Debug.Assert(s.PrintState() == myID.ToString());
-                var data = MessagePackSerializer.Serialize(s);
+                var data = readOnly ? new byte[0] : MessagePackSerializer.Serialize(s);
+                
                 Debug.Assert(statePerBatch.ContainsKey(cxt.localBid) == false);
                 statePerBatch[cxt.localBid] = new Tuple<DateTime, byte[]>(timestamp, data);
-                if (log.IsLoggingEnabled()) await log.LocalBatchComplete(myID, cxt.localBid, coordID, data, timestamp);
-
+                if (log.IsLoggingEnabled() && startLogging && !readOnly)
+                {
+                    //Console.WriteLine($"{myID.className}: {data.Length} bytes");
+                    await log.LocalBatchComplete(myID, cxt.localBid, coordID, data, timestamp);
+                }
+                
                 myScheduler.scheduleInfo.CompleteDetBatch(cxt.localBid);
 
                 var coord = myGrainFactory.GetGrain<ILocalCoordGrain>(coordID);

@@ -7,7 +7,6 @@ using Concurrency.Interface.GrainPlacement;
 using Concurrency.Interface.Logging;
 using StackExchange.Redis;
 using MessagePack;
-using Orleans;
 
 namespace TPCC.Grains
 {

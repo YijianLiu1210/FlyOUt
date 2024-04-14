@@ -36,10 +36,10 @@ namespace Concurrency.Implementation.Configuration
             grainPlacement_db = redis.GetDatabase(Constants.Redis_GrainPlacementMap);
         }
 
-        public Task Init(bool hierarchicalCoord)
+        public Task Init(bool hierarchicalCoord, Dictionary<string, string> tpccGrainNames)
         {
             this.hierarchicalCoord = hierarchicalCoord;
-            grainPlacementCache.SetHierarchicalCoord(hierarchicalCoord);
+            grainPlacementCache.SetHierarchicalCoord(hierarchicalCoord, tpccGrainNames);
             return Task.CompletedTask;
         }
 

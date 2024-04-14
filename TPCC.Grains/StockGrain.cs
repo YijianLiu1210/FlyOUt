@@ -65,6 +65,8 @@ namespace TPCC.Grains
 
     public class StockGrain : TransactionExecutionGrain<StockTable>, IStockGrain
     {
+        StockTable cache = new StockTable();
+
         public StockGrain(ILoggingProtocol log, IGrainPlacementCache grainPlacementInfo, IConnectionMultiplexer redis) : base(log, grainPlacementInfo, redis)
         {
         }
@@ -78,11 +80,27 @@ namespace TPCC.Grains
             {
                 var input = (Tuple<int, int>)funcInput;    // W_ID, StockGrain index within the warehouse
                 var myState = await GetState(context, AccessMode.ReadWrite);
-                myState.W_ID = input.Item1;
-                myState.stock = InMemoryDataGenerator.GenerateStockTable(input.Item2);
+
+                if (!Constants.deltaLogging)
+                {
+                    myState.W_ID = input.Item1;
+                    myState.stock = InMemoryDataGenerator.GenerateStockTable(input.Item2);
+                }
+                else
+                {
+                    // use "cache" to store all the stock info
+                    cache.W_ID = input.Item1;
+                    cache.stock = InMemoryDataGenerator.GenerateStockTable(input.Item2);
+
+                    // use "myState" to store the updated entries
+                    myState.W_ID = input.Item1;
+                    myState.stock = new Dictionary<int, Stock>();
+                }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.WriteLine($"Stock Grain {Helper.ConvertGuidToInt(myID.id)}: {e.Message}, {e.StackTrace}");
+                Debug.Assert(false);
                 res.exception = true;
             }
             return res;
@@ -103,33 +121,61 @@ namespace TPCC.Grains
                 var items = input.itemsToBuy;
                 if (items.Count == 0) throw new Exception("Exception: no items to buy");
                 var myState = await GetState(context, AccessMode.ReadWrite);
-                
+
+                if (Constants.deltaLogging)
+                {
+                    Debug.Assert(myState.W_ID == cache.W_ID);
+                    myState.stock = new Dictionary<int, Stock>();
+                }
+
                 if (remoteFlag == 1) Debug.Assert(W_ID != myState.W_ID);
                 else Debug.Assert(W_ID == myState.W_ID);
+                
                 foreach (var item in items)
                 {
                     var I_ID = item.Key;
                     var quantity = item.Value;
 
-                    Debug.Assert(myState.stock.ContainsKey(I_ID));
-                    var the_stock = myState.stock[I_ID];
-                    var S_QUANTITY = the_stock.S_QUANTITY;
-                    if (S_QUANTITY - quantity >= 10) S_QUANTITY -= quantity;
-                    else S_QUANTITY += 91 - quantity;
+                    if (!Constants.deltaLogging)
+                    {
+                        Debug.Assert(myState.stock.ContainsKey(I_ID));
+                        var the_stock = myState.stock[I_ID];
+                        var S_QUANTITY = the_stock.S_QUANTITY;
+                        if (S_QUANTITY - quantity >= 10) S_QUANTITY -= quantity;
+                        else S_QUANTITY += 91 - quantity;
 
-                    the_stock.S_YTD += quantity;
-                    the_stock.S_ORDER_CNT++;
-                    the_stock.S_REMOTE_CNT += remoteFlag;
+                        the_stock.S_YTD += quantity;
+                        the_stock.S_ORDER_CNT++;
+                        the_stock.S_REMOTE_CNT += remoteFlag;
 
-                    var S_DIST = the_stock.S_DIST[D_ID];
-                    result.Add(I_ID, S_DIST);
+                        var S_DIST = the_stock.S_DIST[D_ID];
+                        result.Add(I_ID, S_DIST);
+                    }
+                    else
+                    {
+                        Debug.Assert(cache.stock.ContainsKey(I_ID));
+                        var the_stock = cache.stock[I_ID];
+                        var S_QUANTITY = the_stock.S_QUANTITY;
+                        if (S_QUANTITY - quantity >= 10) S_QUANTITY -= quantity;
+                        else S_QUANTITY += 91 - quantity;
+
+                        the_stock.S_YTD += quantity;
+                        the_stock.S_ORDER_CNT++;
+                        the_stock.S_REMOTE_CNT += remoteFlag;
+
+                        var S_DIST = the_stock.S_DIST[D_ID];
+                        result.Add(I_ID, S_DIST);
+
+                        // write updated entry to myState
+                        Debug.Assert(!myState.stock.ContainsKey(I_ID));
+                        myState.stock.Add(I_ID, the_stock);
+                    }
                 }
                 ret.resultObj = result;
             }
             catch (Exception)
             {
                 ret.exception = true;
-                if (context.localBid != -1) await GetState(context, AccessMode.ReadWrite);
             }
             return ret;
         }

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Utilities;
 
 namespace Concurrency.Interface.GrainPlacement
 {
     public interface IGrainPlacementCache
     {
-        void SetHierarchicalCoord(bool hierarchicalCoord);
+        void SetHierarchicalCoord(bool hierarchicalCoord, Dictionary<string, string> tpccGrainNames);
         bool GetHierarchicalCoord();
         void PrepareCache(bool isGrainMigrationExp, string siloAddress);
         void UpdateUserGrainInfo(Guid grainID, string siloAddress);

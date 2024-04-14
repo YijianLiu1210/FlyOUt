@@ -1,13 +1,13 @@
 ﻿using Orleans;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Utilities;
 
 namespace Concurrency.Interface.Configuration
 {
     public interface IGlobalConfigGrain : IGrainWithStringKey
     {
-        Task ConfigGlobalEnv(int numLocalSilo, bool isLoggingEnabled, bool hierarchicalCoord, bool optimizeCommit);
+        Task ConfigGlobalEnv(int numLocalSilo, bool isLoggingEnabled, bool hierarchicalCoord, bool optimizeCommit, Dictionary<string, string> tpccGrainNames);
         Task ConfigGlobalBatchSize(int batchSizeInMSecsBasic);
 
         Task PrepareCache(bool isGrainMigrationExp);

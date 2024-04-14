@@ -24,6 +24,16 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
         readonly CommitInfo commitInfo;
         readonly Dictionary<DateTime, byte[]> lastPreparedState;
 
+        // for TPCC only
+        bool startLogging = Constants.benchmark == BenchmarkType.TPCC ? false : true;
+
+        public void StartLogging() => startLogging = true;
+
+        public void StopLogging()
+        {
+            if (Constants.benchmark == BenchmarkType.TPCC) startLogging = false;
+        }
+
         public NonDetCommitter(
             GrainID myID,
             Dictionary<long, GrainID> coordinatorMap,
@@ -84,7 +94,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
 
         public async Task<bool> CoordPrepare(long tid, Dictionary<GrainID, OpOnGrain> grainOpInfo)
         {
-            if (log.IsLoggingEnabled()) await log.CoordPrepare(myID, tid, grainOpInfo.Keys.ToHashSet());
+            if (log.IsLoggingEnabled() && startLogging) await log.CoordPrepare(myID, tid, grainOpInfo.Keys.ToHashSet());
 
             var prepareTask = new List<Task<bool>>();
             foreach (var item in grainOpInfo)
@@ -110,7 +120,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
 
         public async Task CoordCommit(long tid, NonDetFuncResult funcResult)
         {
-            if (log.IsLoggingEnabled()) await log.CoordCommit(myID, tid);
+            if (log.IsLoggingEnabled() && startLogging) await log.CoordCommit(myID, tid);
 
             var tasks = new List<Task>();
             foreach (var item in funcResult.grainOpInfo)
@@ -157,7 +167,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
                 var data = MessagePackSerializer.Serialize(s);
                 lastPreparedState.Clear();
                 lastPreparedState.Add(timestamp, data);
-                if (log.IsLoggingEnabled()) await log.Prepare(myID, tid, coordinatorMap[tid], data, timestamp);
+                if (log.IsLoggingEnabled() && startLogging) await log.Prepare(myID, tid, coordinatorMap[tid], data, timestamp);
             }
             return vote;
         }
@@ -165,7 +175,7 @@ namespace Concurrency.Implementation.TransactionExecution.Nondeterministic
         public async Task Commit(long tid)
         {
             state.Commit(tid);
-            if (log.IsLoggingEnabled()) await log.Commit(myID, tid);
+            if (log.IsLoggingEnabled() && startLogging) await log.Commit(myID, tid);
         }
 
         public void Abort(long tid) => state.Abort(tid);

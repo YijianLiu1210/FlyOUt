@@ -81,7 +81,7 @@ namespace Concurrency.Implementation.Configuration
             }
         }
 
-        public async Task ConfigGlobalEnv(int numLocalSilo, bool isLoggingEnabled, bool hierarchicalCoord, bool optimizeCommit)
+        public async Task ConfigGlobalEnv(int numLocalSilo, bool isLoggingEnabled, bool hierarchicalCoord, bool optimizeCommit, Dictionary<string, string> tpccGrainNames)
         {
             if (configurationDone)
             {
@@ -98,9 +98,9 @@ namespace Concurrency.Implementation.Configuration
             {
                 var configGrain = GrainFactory.GetGrain<ILocalConfigGrain>(Guid.NewGuid());
                 localConfigGrains.Add(configGrain);
-                await configGrain.Init(hierarchicalCoord);
+                await configGrain.Init(hierarchicalCoord, tpccGrainNames);
             }
-            if (numLocalSilo != 1) grainPlacementCache.SetHierarchicalCoord(hierarchicalCoord);
+            if (numLocalSilo != 1) grainPlacementCache.SetHierarchicalCoord(hierarchicalCoord, tpccGrainNames);
 
             await InitAllLogging(isLoggingEnabled);
 

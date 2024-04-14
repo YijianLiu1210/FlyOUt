@@ -18,7 +18,6 @@ using TPCC.Grains;
 using Concurrency.Interface.TransactionExecution;
 using SmallBank.Grains;
 using System.Linq;
-using MessagePack;
 
 namespace SnapperExperimentController
 {
@@ -46,7 +45,7 @@ namespace SnapperExperimentController
         readonly IDatabase siloInfo_db;
 
         readonly bool eventual;
-        readonly Dictionary<string, Dictionary<string, HashSet<int>>> grainsPerSilo;    // silo name, grain name, grian ID
+        Dictionary<string, Dictionary<string, HashSet<int>>> grainsPerSilo;    // silo name, grain name, grian ID
 
         // for SmallBank only
         readonly string grainName;
@@ -58,6 +57,7 @@ namespace SnapperExperimentController
         readonly string customerGrainName;
         readonly string stockGrainName;
         readonly string orderGrainName;
+        readonly Dictionary<string, string> tpccGrainNames;
 
         public ServerConnector(int numLocalSilo, ImplementationType implementationType, bool isLoggingEnabled, string redis_ConnectionString,
             bool hierarchicalCoord, bool optimizeCommit)
@@ -83,6 +83,16 @@ namespace SnapperExperimentController
                 customerGrainName = eventual ? typeof(EventualCustomerGrain).FullName : typeof(CustomerGrain).FullName;
                 stockGrainName = eventual ? typeof(EventualStockGrain).FullName : typeof(StockGrain).FullName;
                 orderGrainName = eventual ? typeof(EventualOrderGrain).FullName : typeof(OrderGrain).FullName;
+
+                tpccGrainNames = new Dictionary<string, string>
+                {
+                    { "itemGrainName", itemGrainName },
+                    { "warehouseGrainName", warehouseGrainName },
+                    { "districtGrainName", districtGrainName },
+                    { "customerGrainName", customerGrainName },
+                    { "stockGrainName", stockGrainName },
+                    { "orderGrainName", orderGrainName }
+                };
             }
             else if (Constants.benchmark == BenchmarkType.SMALLBANK)
             {
@@ -177,9 +187,10 @@ namespace SnapperExperimentController
 
             if (implementationType == ImplementationType.SNAPPER)
             {
+                var start = DateTime.Now;
                 globalConfigGrain = client.GetGrain<IGlobalConfigGrain>("GlobalConfigGrain");
-                await globalConfigGrain.ConfigGlobalEnv(numLocalSilo, isLoggingEnabled, hierarchicalCoord, optimizeCommit);
-                Console.WriteLine($"Spawned the global configuration grain.");
+                await globalConfigGrain.ConfigGlobalEnv(numLocalSilo, isLoggingEnabled, hierarchicalCoord, optimizeCommit, tpccGrainNames);
+                Console.WriteLine($"Spawned the global configuration grain, it takes {Helper.ChangeFormat((DateTime.Now - start).TotalSeconds, 2)}s");
             }
             initializationFinish = true;
         }
@@ -207,8 +218,9 @@ namespace SnapperExperimentController
             Console.WriteLine("Start prepare cache");
             if (implementationType == ImplementationType.SNAPPER)
             {
+                var start = DateTime.Now;
                 await globalConfigGrain.PrepareCache(isGrainMigrationExp);
-                Console.WriteLine("GrainPlacementCache is prepared for all local silos");
+                Console.WriteLine($"GrainPlacementCache is prepared for all local silos, it takes {Helper.ChangeFormat((DateTime.Now - start).TotalSeconds, 2)}s");
             }
             cachePrepared = true;
         }
@@ -361,69 +373,36 @@ namespace SnapperExperimentController
 
         void LoadTPCCGrains()
         {
+            var start = DateTime.Now;
+            Console.WriteLine($"Load TPCC grains...");
             registeredSilo = Helper.GetLocalSiloList(siloInfo_db);
             Debug.Assert(registeredSilo.Count == numLocalSilo);
 
+            grainsPerSilo = TPCCManager.CalculateGrainPlacement(numLocalSilo, registeredSilo, tpccGrainNames);
+            Console.WriteLine($"Finish calculating alkl grain placement info, it takes {Helper.ChangeFormat((DateTime.Now - start).TotalSeconds, 2)}s");
+            
+            /*
             for (var siloID = 0; siloID < numLocalSilo; siloID++)
             {
+                start = DateTime.Now;
                 var silo = registeredSilo[siloID];
-                grainsPerSilo.Add(silo, new Dictionary<string, HashSet<int>> 
-                {
-                    { itemGrainName, new HashSet<int>() },
-                    { warehouseGrainName, new HashSet<int>() },
-                    { districtGrainName, new HashSet<int>() },
-                    { customerGrainName, new HashSet<int>() },
-                    { stockGrainName, new HashSet<int>() },
-                    { orderGrainName, new HashSet<int>() },
-                });
 
-                // STEP 1: calculate IDs of all grains in the target silo
-                var minWarehouseID = siloID * Constants.NUM_W_PER_SILO;
-                for (var W_ID = minWarehouseID; W_ID < minWarehouseID + Constants.NUM_W_PER_SILO; W_ID++)
-                {
-                    // ItemGrain
-                    grainsPerSilo[silo][itemGrainName].Add(TPCCManager.GetItemGrain(W_ID));
-
-                    // WarehouseGrain
-                    grainsPerSilo[silo][warehouseGrainName].Add(TPCCManager.GetWarehouseGrain(W_ID));
-
-                    // DistrictGrain and CustomerGrain
-                    for (int D_ID = 0; D_ID < Constants.NUM_D_PER_W; D_ID++)
-                    {
-                        grainsPerSilo[silo][districtGrainName].Add(TPCCManager.GetDistrictGrain(W_ID, D_ID));
-                        grainsPerSilo[silo][customerGrainName].Add(TPCCManager.GetCustomerGrain(W_ID, D_ID));
-                    }
-
-                    // StockGrain
-                    for (int i = 0; i < Constants.NUM_StockGrain_PER_W; i++)
-                    {
-                        var stockGrainID = W_ID * TPCCManager.NUM_GRAIN_PER_W + 1 + 1 + 2 * Constants.NUM_D_PER_W + i;
-                        grainsPerSilo[silo][stockGrainName].Add(stockGrainID);
-                    } 
-
-                    // OrderGrain
-                    for (int D_ID = 0; D_ID < Constants.NUM_D_PER_W; D_ID++)
-                    {
-                        for (int i = 0; i < TPCCManager.NUM_OrderGrain_PER_D; i++)
-                        {
-                            var id = W_ID * TPCCManager.NUM_GRAIN_PER_W + 1 + 1 + 2 * Constants.NUM_D_PER_W + Constants.NUM_StockGrain_PER_W + D_ID * TPCCManager.NUM_OrderGrain_PER_D + i;
-                            grainsPerSilo[silo][orderGrainName].Add(id);
-                        }
-                    }
-                }
-
-                // STEP 2: write the initial grain placement info to redis
+                // write the initial grain placement info to redis
+                
                 var grainIDsInSilo = new List<Guid>();
                 foreach (var item in grainsPerSilo[silo]) grainIDsInSilo.AddRange(item.Value.Select(x => Helper.ConvertIntToGuid(x)));
-                
+
                 var data = MessagePackSerializer.Serialize(grainIDsInSilo);
                 siloInfo_db.HashSet(Constants.GeneralInfoPrefix + silo, "grainsInSilo", data);
-
+                
                 foreach (var item in grainsPerSilo[silo])
                     foreach (var id in item.Value)
                         grainPlacement_db.HashSet(Constants.GrainIDPrefix + Helper.ConvertIntToGuid(id).ToString(), "SiloAddress", silo);
+
+                Console.WriteLine($"Finish writing grains info for silo {silo} to Redis, it takes {Helper.ChangeFormat((DateTime.Now - start).TotalSeconds, 2)}s");
             }
-    
+            */
+
             // spawn multiple threads to load grains
             var numSiloWithGrains = numLocalSilo;
             threadFinishLoadingGrain = new CountdownEvent(numSiloWithGrains);
@@ -431,11 +410,11 @@ namespace SnapperExperimentController
             {
                 var thread = new Thread(ThreadWorkForTPCCAsync);
                 thread.Start(i);
-                thread.Join();
             }
             threadFinishLoadingGrain.Wait();
 
-            var numGrain = Constants.numGrainPerLocalSilo * numSiloWithGrains;
+            var numGrain = 0;
+            foreach (var item in grainsPerSilo) foreach (var iitem in item.Value) numGrain += iitem.Value.Count;
             Console.WriteLine($"Finish loading TPCC grains, numGrains = {numGrain}");
         }
 
@@ -484,7 +463,9 @@ namespace SnapperExperimentController
                 }
                 else
                 {
-                    var grain = client.GetGrain<IItemGrain>(Helper.ConvertIntToGuid(itemGrainID));
+                    var guid = Helper.ConvertIntToGuid(itemGrainID);
+                    var grain = client.GetGrain<IItemGrain>(guid);
+                    //await grain.StartTransaction("Init", null, new List<GrainID> { new GrainID(guid, itemGrainName) });
                     await grain.StartTransaction("Init", null);
                 }
             }
@@ -503,7 +484,9 @@ namespace SnapperExperimentController
                 }
                 else
                 {
-                    var grain = client.GetGrain<IWarehouseGrain>(Helper.ConvertIntToGuid(warehouseGrainID));
+                    var guid = Helper.ConvertIntToGuid(warehouseGrainID);
+                    var grain = client.GetGrain<IWarehouseGrain>(guid);
+                    //await grain.StartTransaction("Init", W_ID, new List<GrainID> { new GrainID(guid, warehouseGrainName) });
                     await grain.StartTransaction("Init", W_ID);
                 }
             }
@@ -531,9 +514,14 @@ namespace SnapperExperimentController
                     }
                     else
                     {
-                        var districtGrain = client.GetGrain<IDistrictGrain>(Helper.ConvertIntToGuid(districtGrainID));
+                        var guid = Helper.ConvertIntToGuid(districtGrainID);
+                        var districtGrain = client.GetGrain<IDistrictGrain>(guid);
+                        //tasks.Add(districtGrain.StartTransaction("Init", input, new List<GrainID> { new GrainID(guid, districtGrainName) }));
                         tasks.Add(districtGrain.StartTransaction("Init", input));
-                        var customerGrain = client.GetGrain<ICustomerGrain>(Helper.ConvertIntToGuid(customerGrainID));
+
+                        guid = Helper.ConvertIntToGuid(customerGrainID);
+                        var customerGrain = client.GetGrain<ICustomerGrain>(guid);
+                        //tasks.Add(customerGrain.StartTransaction("Init", input, new List<GrainID> { new GrainID(guid, customerGrainName) }));
                         tasks.Add(customerGrain.StartTransaction("Init", input));
                     }
 
@@ -564,7 +552,9 @@ namespace SnapperExperimentController
                     }
                     else
                     {
-                        var grain = client.GetGrain<IStockGrain>(Helper.ConvertIntToGuid(stockGrainID));
+                        var guid = Helper.ConvertIntToGuid(stockGrainID);
+                        var grain = client.GetGrain<IStockGrain>(guid);
+                        //tasks.Add(grain.StartTransaction("Init", input, new List<GrainID> { new GrainID(guid, stockGrainName) }));
                         tasks.Add(grain.StartTransaction("Init", input));
                     }
 
@@ -597,7 +587,9 @@ namespace SnapperExperimentController
                         }
                         else
                         {
-                            var grain = client.GetGrain<IOrderGrain>(Helper.ConvertIntToGuid(orderGrainID));
+                            var guid = Helper.ConvertIntToGuid(orderGrainID);
+                            var grain = client.GetGrain<IOrderGrain>(guid);
+                            //tasks.Add(grain.StartTransaction("Init", input, new List<GrainID> { new GrainID(guid, orderGrainName) }));
                             tasks.Add(grain.StartTransaction("Init", input));
                         }
 

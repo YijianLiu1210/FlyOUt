@@ -27,7 +27,7 @@ using System.Diagnostics;
 
 //var numLocalSilo = int.Parse(args[0]);
 //var reInvokeAllResources = bool.Parse(args[1]);
-var numLocalSilo = 2;
+var numLocalSilo = 16;
 var reInvokeAllResources = false;
 
 // ========================================================================================================

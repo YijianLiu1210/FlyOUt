@@ -10,7 +10,7 @@
 - `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
 - `.\RunRedis.ps1`
 
-2. Start the following processes in order
+2. Start the following processes in order (with logging)
 - Start Controller: `dotnet run --project .\SnapperExperimentController true 61 2 SNAPPER true true true true localhost:6379`
 - Start Worker 0: `dotnet run --project .\SnapperExperimentWorker true 2 0 SNAPPER localhost localhost:6379`
 - Start Worker 1: `dotnet run --project .\SnapperExperimentWorker true 2 1 SNAPPER localhost localhost:6379`
@@ -18,3 +18,21 @@
 - Start Global Silo: `dotnet run --project .\SnapperSiloHost true true 2 -1 SNAPPER true localhost localhost:6379`
 - Start Local Silo 0: `dotnet run --project .\SnapperSiloHost true false 2 0 SNAPPER true localhost localhost:6379`
 - Start Local Silo 1: `dotnet run --project .\SnapperSiloHost true false 2 1 SNAPPER true localhost localhost:6379`
+
+2. Start the following processes in order (no logging)
+- Start Controller: `dotnet run --project .\SnapperExperimentController true 61 2 SNAPPER false true true true localhost:6379`
+- Start Worker 0: `dotnet run --project .\SnapperExperimentWorker true 2 0 SNAPPER localhost localhost:6379`
+- Start Worker 1: `dotnet run --project .\SnapperExperimentWorker true 2 1 SNAPPER localhost localhost:6379`
+
+- Start Global Silo: `dotnet run --project .\SnapperSiloHost true true 2 -1 SNAPPER false localhost localhost:6379`
+- Start Local Silo 0: `dotnet run --project .\SnapperSiloHost true false 2 0 SNAPPER false localhost localhost:6379`
+- Start Local Silo 1: `dotnet run --project .\SnapperSiloHost true false 2 1 SNAPPER false localhost localhost:6379`
+
+## How to run it on EC2 machine
+- Start Controller: `dotnet run --project .\SnapperExperimentController false 61 2 SNAPPER true true true true snapper.kag8or.clustercfg.memorydb.eu-north-1.amazonaws.com:6379`
+- Start Worker 0: `dotnet run --project .\SnapperExperimentWorker false 2 0 SNAPPER 13.50.232.75 snapper.kag8or.clustercfg.memorydb.eu-north-1.amazonaws.com:6379`
+- Start Worker 1: `dotnet run --project .\SnapperExperimentWorker false 2 1 SNAPPER 13.50.232.75 snapper.kag8or.clustercfg.memorydb.eu-north-1.amazonaws.com:6379`
+
+- Start Global Silo: `dotnet run --project .\SnapperSiloHost false true 2 -1 SNAPPER true 13.50.232.75 snapper.kag8or.clustercfg.memorydb.eu-north-1.amazonaws.com:6379`
+- Start Local Silo 0: `dotnet run --project .\SnapperSiloHost false false 2 0 SNAPPER true 13.50.232.75 snapper.kag8or.clustercfg.memorydb.eu-north-1.amazonaws.com:6379`
+- Start Local Silo 1: `dotnet run --project .\SnapperSiloHost false false 2 1 SNAPPER true 13.50.232.75 snapper.kag8or.clustercfg.memorydb.eu-north-1.amazonaws.com:6379`

@@ -259,6 +259,17 @@ namespace Concurrency.Implementation.TransactionExecution
         /// <summary> This interface is called by clients to start a PACT </summary>
         public async Task<TransactionResult> StartTransaction(string startFunc, object funcInput, List<GrainID> grainAccessInfo)
         {
+            if (startFunc == "Init")
+            {
+                detTxnExecutor.StopLogging();
+                nonDetCommitter.StopLogging();
+            }
+            else 
+            {
+                detTxnExecutor.StartLogging();
+                nonDetCommitter.StartLogging();
+            }
+
             var receiveTxnTime = DateTime.Now;
             if (underMigration) throw new SnapperGrainMigrationException($"grain {myID}: Fail to StartTxn for PACT, grain is under migration, try again later");
 
@@ -289,6 +300,17 @@ namespace Concurrency.Implementation.TransactionExecution
         /// <summary> This interface is called by clients to start an ACT </summary>
         public async Task<TransactionResult> StartTransaction(string startFunc, object funcInput)
         {
+            if (startFunc == "Init")
+            {
+                detTxnExecutor.StopLogging();
+                nonDetCommitter.StopLogging();
+            }
+            else
+            {
+                detTxnExecutor.StartLogging();
+                nonDetCommitter.StartLogging();
+            }
+
             //Console.WriteLine($"Grain {Helper.ConvertGuidToInt(this.GetPrimaryKey())}-{this.GrainReference}: receive txn {startFunc}");
             var receiveTxnTime = DateTime.Now;
             if (underMigration) throw new SnapperGrainMigrationException($"grain {myID}: Fail to StartTxn for ACT, grain is under migration, try again later");
@@ -428,6 +450,17 @@ namespace Concurrency.Implementation.TransactionExecution
 
         public async Task<Tuple<object, DateTime>> ExecuteDet(FunctionCall call, MyTransactionContext cxt)
         {
+            if (call.funcName == "Init")
+            {
+                detTxnExecutor.StopLogging();
+                nonDetCommitter.StopLogging();
+            }
+            else
+            {
+                detTxnExecutor.StartLogging();
+                nonDetCommitter.StartLogging();
+            }
+
             await detTxnExecutor.WaitForTurn(cxt);
             var time = DateTime.Now;
             var txnRes = await InvokeFunction(call, cxt);   // execute the function call;
@@ -438,6 +471,17 @@ namespace Concurrency.Implementation.TransactionExecution
 
         public async Task<Tuple<NonDetFuncResult, DateTime>> ExecuteNonDet(FunctionCall call, MyTransactionContext cxt)
         {
+            if (call.funcName == "Init")
+            {
+                detTxnExecutor.StopLogging();
+                nonDetCommitter.StopLogging();
+            }
+            else
+            {
+                detTxnExecutor.StartLogging();
+                nonDetCommitter.StartLogging();
+            }
+
             if (underMigration)
             {
                 var funcResult = new NonDetFuncResult();

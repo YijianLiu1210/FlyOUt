@@ -111,8 +111,8 @@
     </experimentID>
 
     <experimentID id = '61'>
-        <numLocalSilo>     2      </numLocalSilo>
+        <numLocalSilo>     16       </numLocalSilo>
         <implementation>   SNAPPER </implementation>
-        <isLoggingEnabled> false    </isLoggingEnabled>
+        <isLoggingEnabled> true    </isLoggingEnabled>
     </experimentID>
 </root>

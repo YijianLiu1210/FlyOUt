@@ -143,9 +143,9 @@ namespace ExperimentAccelerator
             var command = sshClient.CreateCommand(cmd);
             var asyncExe = command.BeginExecute();
 
-            //if (type == SnapperInstanceType.GlobalSilo) PrintConsole(command, asyncExe);
+            if (type == SnapperInstanceType.GlobalSilo) PrintConsole(command, asyncExe);
             if (type == SnapperInstanceType.Controller) PrintConsole(command, asyncExe);
-            //if (type == SnapperInstanceType.LocalSilo) PrintConsole(command, asyncExe);
+            if (type == SnapperInstanceType.LocalSilo) PrintConsole(command, asyncExe);
             if (type == SnapperInstanceType.Worker) PrintConsole(command, asyncExe);
 
             command.EndExecute(asyncExe);     // wait until the command is completed

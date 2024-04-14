@@ -85,24 +85,33 @@ namespace Concurrency.Implementation.Coordinator
 
         public long GenerateBatch(BasicToken token)
         {
-            if (detRequests.Count == 0) return -1;
-
-            // use the max tid in the batch as bid
-            // assign bid and tid to waited PACTs
-            var curBatchID = token.lastEmitTid + detRequests.Count;
-            //var curBatchID = token.lastEmitTid + 1;
-
-            for (int i = 0; i < detRequests.Count; i++)
+            try
             {
-                var tid = ++token.lastEmitTid;
-                GnerateSchedulePerService(tid, curBatchID, detRequests[i]);
-                detRequestPromise[i].SetResult(new Tuple<long, long>(curBatchID, tid));
-            }
-            UpdateToken(token, curBatchID, -1);
+                if (detRequests.Count == 0) return -1;
 
-            detRequests.Clear();
-            detRequestPromise.Clear();
-            return curBatchID;
+                // use the max tid in the batch as bid
+                // assign bid and tid to waited PACTs
+                var curBatchID = token.lastEmitTid + detRequests.Count;
+                //var curBatchID = token.lastEmitTid + 1;
+
+                for (int i = 0; i < detRequests.Count; i++)
+                {
+                    var tid = ++token.lastEmitTid;
+                    GnerateSchedulePerService(tid, curBatchID, detRequests[i]);
+                    detRequestPromise[i].SetResult(new Tuple<long, long>(curBatchID, tid));
+                }
+                UpdateToken(token, curBatchID, -1);
+
+                detRequests.Clear();
+                detRequestPromise.Clear();
+                return curBatchID;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"{e.Message} {e.StackTrace}");
+                Debug.Assert(false);
+                throw;
+            }
         }
 
         public void GnerateSchedulePerService(long tid, long curBatchID, List<string> serviceList)

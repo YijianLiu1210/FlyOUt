@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Threading;
 using StackExchange.Redis;
 using Utilities;
-using System.Linq;
-using MessagePack;
 using System.Diagnostics;
 
 namespace Concurrency.Implementation.GrainPlacement
@@ -60,15 +58,50 @@ namespace Concurrency.Implementation.GrainPlacement
             initializationDone = false;
         }
 
-        public void SetHierarchicalCoord(bool hierarchicalCoord)
+        public void SetHierarchicalCoord(bool hierarchicalCoord, Dictionary<string, string> tpccGrainNames)
         {
             this.hierarchicalCoord = hierarchicalCoord;
             Console.WriteLine($"GrainPlacementCache: set hierarchicalCoord = {hierarchicalCoord}");
+
+            if (Constants.benchmark == BenchmarkType.TPCC)
+            {
+                var registeredSilo = Helper.GetLocalSiloList(siloInfo_db);
+                var numLocalSilo = registeredSilo.Count;
+                Debug.Assert(tpccGrainNames.Count != 0);
+
+                // silo name, grain name, grian ID
+                var grainsPerSilo = TPCCManager.CalculateGrainPlacement(numLocalSilo, registeredSilo, tpccGrainNames);
+                foreach (var item in grainsPerSilo)
+                {
+                    var silo = item.Key;
+
+                    var count = 0;
+                    var totalCount = 0;
+                    foreach (var iitem in item.Value)
+                    {
+                        var grainName = iitem.Key;
+                        foreach (var id in iitem.Value)
+                        {
+                            totalCount++;
+                            var grainID = Helper.ConvertIntToGuid(id);
+                            if (grainIDToSilo.ContainsKey(grainID)) Debug.Assert(grainIDToSilo[grainID] == silo);
+                            else
+                            {
+                                count++;
+                                grainIDToSilo[grainID] = silo;
+                            }
+                        }
+                    }
+                    Console.WriteLine($"Find {totalCount} grain IDs in local silo {silo}, add {count} grain IDs. ");
+                }
+            }
         } 
         public bool GetHierarchicalCoord() => hierarchicalCoord;
 
         public void PrepareCache(bool isGrainMigrationExp, string siloAddress)
         {
+            var start = DateTime.Now;
+
             GetGlobalSiloAddress();
 
             Console.WriteLine($"Write all grain placement info into cache, grainIDToSilo already contains {grainIDToSilo.Count} entries. ");
@@ -84,31 +117,9 @@ namespace Concurrency.Implementation.GrainPlacement
                 }
                 grainInfoLock.Release();
             }
-            else if (Constants.benchmark == BenchmarkType.TPCC)
-            {
-                var localSiloList = Helper.GetLocalSiloList(siloInfo_db);
-
-                foreach (var silo in localSiloList)
-                {
-                    var data = siloInfo_db.HashGet(Constants.GeneralInfoPrefix + silo, "grainsInSilo");
-                    var grainIDsInSilo = MessagePackSerializer.Deserialize<List<Guid>>(data);
-
-                    var count = 0;
-                    foreach (var grainID in grainIDsInSilo)
-                    {
-                        if (grainIDToSilo.ContainsKey(grainID)) Debug.Assert(grainIDToSilo[grainID] == silo);
-                        else
-                        {
-                            count++;
-                            grainIDToSilo[grainID] = silo;
-                        }
-                    }
-                    Console.WriteLine($"Find {grainIDsInSilo.Count()} grain IDs in local silo {silo}, add {count} grain IDs. ");
-                }
-            }
-
+            
             initializationDone = true;
-            Console.WriteLine($"Get info of {grainIDToSilo.Count} grains");
+            Console.WriteLine($"Get info of {grainIDToSilo.Count} grains, it takes {Helper.ChangeFormat((DateTime.Now - start).TotalSeconds, 2)}s");
         }
 
         List<Guid> LoadListInfo(string listName)

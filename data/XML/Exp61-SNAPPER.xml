@@ -4,6 +4,6 @@
 
     <pactPercent> 100 </pactPercent>
             
-	<actPipeSize>   128 </actPipeSize>  
-	<pactPipeSize>  128 </pactPipeSize>
+	<actPipeSize>   4 </actPipeSize>  
+	<pactPipeSize>  64 </pactPipeSize>
 </root>

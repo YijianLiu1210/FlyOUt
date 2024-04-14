@@ -271,6 +271,8 @@ namespace SnapperExperimentWorker
             var numDetConsumer = Constants.numCPUPerLocalSilo / 4;
             var numNonDetConsumer = Constants.numCPUPerLocalSilo / 4;
 
+            if (Constants.benchmark == BenchmarkType.TPCC) numDetConsumer *= 1;
+            
             if (workload.pactPercent == 100) numNonDetConsumer = 0;
             else if (workload.pactPercent == 0) numDetConsumer = 0;
 

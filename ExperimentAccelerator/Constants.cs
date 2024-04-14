@@ -4,7 +4,7 @@
 
     internal class Constants
     {
-        public const string localWorkDir = @"C:\Users\jhs316\Desktop\DistributedSnapper\";
+        public const string localWorkDir = @"C:\Users\yijia\Desktop\DistributedSnapper\";
         public const string localDataPath = localWorkDir + @"data\";
         public const string snapperAmiInstanceID = "i-02fce13908698bcd8";
         //public const string amiPrivateKeyFile = localDataPath + "snapper-ami.pem";

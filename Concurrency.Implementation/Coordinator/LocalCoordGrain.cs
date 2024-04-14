@@ -50,6 +50,9 @@ namespace Concurrency.Implementation.Coordinator
         long highestCommittedLocalBidOnGrain;   // the local bid that is confirmed committed by grains
         long highestCommittedGlobalBidOnGrain;  // the global bid that is confirmed committed by grains
 
+        DateTime timeOfBatchGeneration;
+        double batchSizeInMSecs;
+
         public Task CheckGC()
         {
             detTxnProcessor.CheckGC();
@@ -101,7 +104,11 @@ namespace Concurrency.Implementation.Coordinator
             var neighborID = grainPlacementCache.GetCoordNeighborID(RuntimeIdentity, myID);
             neighborCoord = GrainFactory.GetGrain<ILocalCoordGrain>(neighborID);
 
-            Console.WriteLine($"LocalCoord {Helper.ConvertGuidToInt(myID)}: neighbor = {Helper.ConvertGuidToInt(neighborID)}, optimizeCommit = {this.optimizeCommit}");
+            batchSizeInMSecs = 0;
+            for (int i = 2; i > 2; i /= 2) batchSizeInMSecs *= Constants.scaleSpeedForGlobalBatchSize;
+
+            timeOfBatchGeneration = DateTime.Now;
+            Console.WriteLine($"LocalCoord {Helper.ConvertGuidToInt(myID)}: neighbor = {Helper.ConvertGuidToInt(neighborID)}, optimizeCommit = {this.optimizeCommit}, batch = {batchSizeInMSecs}ms");
             return Task.CompletedTask;
         }
 
@@ -154,8 +161,19 @@ namespace Concurrency.Implementation.Coordinator
 
         public async Task PassToken(LocalToken token)
         {
-            // generate batches
+            // process global batches
             var curBatchIDs = ProcessGlobalBatch(token);
+
+            // generate local batches
+            /*
+            long curBatchID = -1;
+            var elapsedTime = (DateTime.Now - timeOfBatchGeneration).TotalMilliseconds;
+            if (elapsedTime >= batchSizeInMSecs)
+            {
+                curBatchID = detTxnProcessor.GenerateBatch(token);
+                if (curBatchID != -1) timeOfBatchGeneration = DateTime.Now;
+            } 
+            */
             var curBatchID = detTxnProcessor.GenerateBatch(token);
 
             nonDetTxnProcessor.EmitNonDetTransactions(token);

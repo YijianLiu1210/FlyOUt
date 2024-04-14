@@ -14,7 +14,9 @@ namespace Utilities
 
     public class Constants
     {
-        public const bool isLocalTest = true;
+        public const bool deltaLogging = false;
+
+        public const bool isLocalTest = false;
         public const char grainMigrationExpID = '5';
 
         public const string ClusterID = "SnapperCluster";
@@ -101,9 +103,9 @@ namespace Utilities
 
         // for workload generation
         public const int BASE_NUM_MULTITRANSFER = 150000;
-        public const int BASE_NUM_NEWORDER = 20000;
+        public const int BASE_NUM_NEWORDER = 100000;
 
-        public const int maxNumReRun = 3;
+        public const int maxNumReRun = 1;
         public const double sdSafeRange = 0.1;   // standard deviation should within the range of 5% * mean
     }
 }

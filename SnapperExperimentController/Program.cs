@@ -83,6 +83,7 @@ namespace SnapperExperimentController
             serverConnector.InitiateClientAndServer();
             var isGrainMigrationExp = experimentID[0] == Constants.grainMigrationExpID;
             var numEpoch = isGrainMigrationExp ? 1 : Constants.numEpoch;
+            Console.WriteLine($"Controller: ready to load grains. ");
             serverConnector.LoadGrains(isGrainMigrationExp);
             serverConnector.PrepareCache(isGrainMigrationExp);
 
