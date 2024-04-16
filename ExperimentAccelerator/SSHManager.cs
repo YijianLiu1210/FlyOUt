@@ -36,8 +36,8 @@ namespace ExperimentAccelerator
             Connect();
             Console.WriteLine($"{type}: connected to instance, now transfer codes...");
             TerminateProcess();
-            //if (type == SnapperInstanceType.Controller) 
-            DeployCode();
+            if (type == SnapperInstanceType.Controller) DeployConfigureFile();
+            //DeployCode();
 
             var tuple = (Tuple<string, string, List<ExperimentSetting>, int>)obj;
             var controller_public_ip = tuple.Item1;
@@ -116,6 +116,19 @@ namespace ExperimentAccelerator
             // transfer all files from local to remote
             var directoryInfo = new DirectoryInfo(Constants.localWorkDir);
             scpClient.Upload(directoryInfo, Utilities.Constants.workDir);
+        }
+
+        void DeployConfigureFile()
+        {
+            // remove the existing data directory
+            var res = sshClient.RunCommand($"rmdir /Q /S {Utilities.Constants.dataDir}");
+
+            // create a new empty directory
+            res = sshClient.RunCommand($"mkdir {Utilities.Constants.dataDir}");
+
+            // transfer all files from local to remote
+            var directoryInfo = new DirectoryInfo(Constants.localDataPath);
+            scpClient.Upload(directoryInfo, Utilities.Constants.dataDir);
         }
 
         void RunCode(string controller_public_ip, string redis_connectionString, ExperimentSetting exp)

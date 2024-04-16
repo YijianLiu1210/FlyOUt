@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <root>
-    <runExperiment> 61 </runExperiment>
+    <runExperiment> 71 </runExperiment>
 
     <experimentID id = '11'>
         <numLocalSilo>      2,       2,       2,       2,       2       </numLocalSilo>
@@ -113,6 +113,12 @@
     <experimentID id = '61'>
         <numLocalSilo>     16       </numLocalSilo>
         <implementation>   SNAPPER </implementation>
+        <isLoggingEnabled> true    </isLoggingEnabled>
+    </experimentID>
+
+    <experimentID id = '71'>
+        <numLocalSilo>     2       </numLocalSilo>
+        <implementation>   ORLEANSTXN </implementation>
         <isLoggingEnabled> true    </isLoggingEnabled>
     </experimentID>
 </root>

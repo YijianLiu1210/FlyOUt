@@ -2,7 +2,7 @@
 <root>       
     <batchSizeInMSecsBasic> 20 </batchSizeInMSecsBasic>
 
-    <pactPercent> 100 </pactPercent>
+    <pactPercent> 0 </pactPercent>
             
 	<actPipeSize>   4 </actPipeSize>  
 	<pactPipeSize>  64 </pactPipeSize>

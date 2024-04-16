@@ -41,10 +41,12 @@ namespace SnapperExperimentWorker
             }
         }
 
+        Comparer<GrainID> comparer = Comparer<GrainID>.Create((x, y) => x.id.CompareTo(y.id));
+
         public Task<TransactionResult> NewTransaction(IClusterClient client, RequestData data)
         {
             var accountGrains = data.grains;
-            //accountGrains.Sort();
+            //accountGrains.Sort(comparer);
 
             var grainIDList = new List<GrainID>(accountGrains);
 

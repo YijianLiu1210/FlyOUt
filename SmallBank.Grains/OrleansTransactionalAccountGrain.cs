@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Orleans.Transactions.Abstractions;
 using Concurrency.Implementation.GrainPlacement;
+using System.Diagnostics;
 
 namespace SmallBank.Grains
 {
-    using MultiTransferInput = Tuple<int, List<Guid>>;  // money, List<to account>
+    using MultiTransferInput = Tuple<int, List<GrainID>>;  // money, List<to account>
 
     [Reentrant]
     [SnapperGrainPlacementStrategy(GrainType.UserGrain)]
@@ -50,15 +51,13 @@ namespace SmallBank.Grains
                 var task = new List<Task>();
                 foreach (var accountID in toAccounts)
                 {
-                    if (accountID != myAccountID)
-                    {
-                        var grain = GrainFactory.GetGrain<IOrleansTransactionalAccountGrain>(accountID);
-                        var t = grain.StartTransaction("Deposit", money);
-                        task.Add(t);
-                    }
-                    else task.Add(Deposit(money));
+                    Debug.Assert(accountID.id != myAccountID);
+                    var grain = GrainFactory.GetGrain<IOrleansTransactionalAccountGrain>(accountID.id);
+                    //var t = grain.StartTransaction("Deposit", money);
+                    //task.Add(t);
+                    await grain.StartTransaction("Deposit", money);
                 }
-                await Task.WhenAll(task);
+                //await Task.WhenAll(task);
             }
             catch (Exception e)
             {

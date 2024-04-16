@@ -57,7 +57,7 @@ namespace Utilities
         public const int numEpoch = 6;
         public const int numWarmupEpoch = 2;
         public const int epochDurationMSecs = 10000;
-        public const BenchmarkType benchmark = BenchmarkType.TPCC;
+        public const BenchmarkType benchmark = BenchmarkType.SMALLBANK;
         // for SmallBank
         public const int numGrainPerLocalSilo = 10000;
         public const string grainClassName = "SmallBank.Grains.SnapperTransactionalAccountGrain";
@@ -68,8 +68,9 @@ namespace Utilities
         public const int NUM_I = 100000;
         public const int NUM_StockGrain_PER_W = 10000;
 
-        public const string userName = isLocalTest ? "yijia" : "Administrator";
+        public const string userName = isLocalTest ? "jhs316" : "Administrator";
         public const string workDir = @$"C:\Users\{userName}\Desktop\DistributedSnapper";
+        public const string dataDir = @$"C:\Users\{userName}\Desktop\DistributedSnapper\data";
         public const string dataPath = workDir + @"\data\";
         public const string logPath = dataPath + @"log\";
         public const string resultPath = dataPath + "result.txt";
