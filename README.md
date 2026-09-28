@@ -1,4 +1,4 @@
-# DistributedSnapper
+# FlyOUt
 
 ## How to run it on local machine
 
